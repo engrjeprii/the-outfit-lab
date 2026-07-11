@@ -120,16 +120,6 @@ export default function ProductPage() {
     ? product.size_chart
     : [];
 
-  const visibleSizes = isShoes
-    ? sizes.filter((row) => {
-        const key = Object.keys(row)
-          .sort()
-          .map((k) => `${k}:${row[k]}`)
-          .join("|");
-        return isVariantAvailable(key, "Default", activeShoeGender);
-      })
-    : sizes;
-
   const isVariantAvailable = (sizeKey, colorway, gender = null) => {
     const variant = product.variants.find(
       (v) =>
@@ -139,6 +129,16 @@ export default function ProductPage() {
     );
     return variant && !variant.sold_out && variant.stock_qty > 0;
   };
+
+  const visibleSizes = isShoes
+    ? sizes.filter((row) => {
+        const key = Object.keys(row)
+          .sort()
+          .map((k) => `${k}:${row[k]}`)
+          .join("|");
+        return isVariantAvailable(key, "Default", activeShoeGender);
+      })
+    : sizes;
 
   const handleAddToCart = () => {
     if (!selectedVariant) return;
