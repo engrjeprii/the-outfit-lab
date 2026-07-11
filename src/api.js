@@ -1,14 +1,18 @@
 /**
  * Dual-mode API layer.
  *
- * - Default (local dev / demos): in-memory mock API.
- * - Real backend: set REACT_APP_USE_REAL_API=true to call Cloudflare Pages Functions.
+ * - Local dev (`npm start`): in-memory mock API.
+ * - Production builds (deployed to Cloudflare Pages): real backend via Pages Functions.
+ * - Override: set REACT_APP_USE_REAL_API=true/false.
  */
 
 import { formatPrice } from "./components/ProductCard";
 import { displaySize } from "./components/SizeColorSelector";
 
-const USE_REAL_API = process.env.REACT_APP_USE_REAL_API === "true";
+const USE_REAL_API =
+  process.env.REACT_APP_USE_REAL_API !== undefined
+    ? process.env.REACT_APP_USE_REAL_API === "true"
+    : process.env.NODE_ENV === "production";
 
 function generateId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
