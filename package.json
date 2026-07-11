@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-router-dom": "^6.30.4",
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4"
   },
@@ -16,7 +17,12 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "pages:dev": "npm run build && wrangler pages dev build --compatibility-date=2026-07-01",
+    "pages:deploy": "wrangler pages deploy build",
+    "db:create": "wrangler d1 create the-outfit-lab-db",
+    "db:migrate": "wrangler d1 migrations apply the-outfit-lab-db",
+    "db:seed": "wrangler d1 execute the-outfit-lab-db --file ./seed.sql"
   },
   "eslintConfig": {
     "extends": [
@@ -35,5 +41,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260711.1",
+    "wrangler": "^4.110.0"
   }
 }

@@ -1,0 +1,234 @@
+import React, { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { api } from "../api";
+import { useCart } from "../cart";
+import { formatPrice } from "../components/ProductCard";
+import { displaySize } from "../components/SizeColorSelector";
+
+function BackIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M19 12H5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 19L5 12L12 5" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ direction = "down" }) {
+  const rotate = direction === "up" ? "180deg" : "0deg";
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ transform: `rotate(${rotate})`, transition: "transform 0.2s" }}
+    >
+      <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function Accordion({ title, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="accordion-item">
+      <button className="accordion-header" onClick={() => setOpen((o) => !o)}>
+        <span>{title}</span>
+        <ChevronIcon direction={open ? "up" : "down"} />
+      </button>
+      {open && <div className="accordion-body">{children}</div>}
+    </div>
+  );
+}
+
+export default function ProductPage() {
+  const { id } = useParams();
+  const { addItem } = useCart();
+  const [product, setProduct] = useState(null);
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [added, setAdded] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await api.getProduct(id);
+        setProduct(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [id]);
+
+  useEffect(() => {
+    setSelectedSize("");
+    setSelectedColor("");
+    setQuantity(1);
+    setImageIndex(0);
+  }, [id]);
+
+  if (loading) return <div className="page-status">Loading...</div>;
+  if (error) return <div className="page-status error">{error}</div>;
+  if (!product) return <div className="page-status">Product not found.</div>;
+
+  const colorways = [...new Set(product.variants.map((v) => v.colorway))];
+  const sizes = product.size_chart.length > 0 ? product.size_chart : [];
+
+  const selectedVariant = product.variants.find(
+    (v) => v.size_key === selectedSize && v.colorway === selectedColor
+  );
+
+  const isVariantAvailable = (sizeKey, colorway) => {
+    const variant = product.variants.find(
+      (v) => v.size_key === sizeKey && v.colorway === colorway
+    );
+    return variant && !variant.sold_out && variant.stock_qty > 0;
+  };
+
+  const handleAddToCart = () => {
+    if (!selectedVariant) return;
+    addItem(product, selectedVariant, quantity);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 3000);
+  };
+
+  const images = product.images && product.images.length > 0 ? product.images : [];
+
+  return (
+    <React.Fragment>
+      <Link to="/" className="back-link">
+        <BackIcon /> Back to Shop
+      </Link>
+
+      <div className="product-page">
+        <div className="product-gallery">
+          <img
+            src={images[imageIndex] || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"}
+            alt={product.name}
+            className="product-gallery-main"
+          />
+          {images.length > 1 && (
+            <div className="product-gallery-thumbs">
+              {images.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt={`${product.name} ${idx + 1}`}
+                  className={`product-gallery-thumb ${idx === imageIndex ? "active" : ""}`}
+                  onClick={() => setImageIndex(idx)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="product-details">
+          <p className="product-brand">{product.brand} <span className="product-gender">{product.gender}</span></p>
+          <h1>{product.name}</h1>
+          <p className="product-price-large">{formatPrice(product.price)}</p>
+          <p className="product-description">{product.description}</p>
+
+          <div className="selector-group">
+            <label>Color</label>
+            <div className="selector-options">
+              {colorways.map((color) => {
+                const available = selectedSize
+                  ? isVariantAvailable(selectedSize, color)
+                  : product.variants.some((v) => v.colorway === color && !v.sold_out && v.stock_qty > 0);
+                return (
+                  <button
+                    key={color}
+                    className={`selector-option ${selectedColor === color ? "active" : ""} ${!available ? "disabled" : ""}`}
+                    onClick={() => available && setSelectedColor(color)}
+                    disabled={!available}
+                  >
+                    {color}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="selector-group">
+            <label>Size</label>
+            <div className="selector-options">
+              {sizes.map((row, idx) => {
+                const key = Object.keys(row)
+                  .sort()
+                  .map((k) => `${k}:${row[k]}`)
+                  .join("|");
+                const available = selectedColor
+                  ? isVariantAvailable(key, selectedColor)
+                  : product.variants.some((v) => v.size_key === key && !v.sold_out && v.stock_qty > 0);
+                return (
+                  <button
+                    key={idx}
+                    className={`selector-option ${selectedSize === key ? "active" : ""} ${!available ? "disabled" : ""}`}
+                    onClick={() => available && setSelectedSize(key)}
+                    disabled={!available}
+                  >
+                    {displaySize(key)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="quantity-row">
+            <label htmlFor="qty">Quantity</label>
+            <div className="quantity-stepper">
+              <button onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</button>
+              <input
+                id="qty"
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              />
+              <button onClick={() => setQuantity((q) => q + 1)}>+</button>
+            </div>
+          </div>
+
+          <button
+            className="btn btn-primary btn-large"
+            onClick={handleAddToCart}
+            disabled={!selectedVariant}
+          >
+            {selectedVariant ? "Add to Cart" : "Select size and color"}
+          </button>
+
+          {added && (
+            <div className="add-to-cart-confirmation">
+              <p>Added to cart.</p>
+              <Link to="/cart" className="btn btn-secondary">View Cart</Link>
+            </div>
+          )}
+
+          <div className="accordion-list">
+            {product.details?.material && (
+              <Accordion title="Details" defaultOpen>
+                <ul style={{ paddingLeft: "1.25rem", margin: 0 }}>
+                  {Object.entries(product.details).map(([k, v]) => (
+                    <li key={k}><strong>{k.charAt(0).toUpperCase() + k.slice(1)}:</strong> {v}</li>
+                  ))}
+                </ul>
+              </Accordion>
+            )}
+            <Accordion title="Shipping & Returns">
+              <p>Free shipping on orders over ₱2,000. Easy 30-day returns on unused items.</p>
+            </Accordion>
+          </div>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}

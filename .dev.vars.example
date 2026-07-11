@@ -1,0 +1,7 @@
+# Local development secrets for Cloudflare Pages Functions.
+# Copy this file to `.dev.vars` and fill in real values for local development.
+# `.dev.vars` is gitignored and never deployed.
+
+ADMIN_PASSWORD=changeme
+R2_BUCKET_NAME=the-outfit-lab-images
+D1_DATABASE_ID=replace-with-your-d1-database-id

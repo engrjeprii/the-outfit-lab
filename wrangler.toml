@@ -1,0 +1,16 @@
+name = "the-outfit-lab"
+pages_build_output_dir = "build"
+compatibility_date = "2026-07-01"
+
+# D1 database binding for categories, products, variants, and orders.
+# Replace database_id with the ID returned after running `npm run db:create`.
+[[d1_databases]]
+binding = "DB"
+database_name = "the-outfit-lab-db"
+database_id = "e4d3a882-6967-45d0-bc3a-7554ed36e348"
+
+# R2 bucket binding for product images.
+# Create this bucket in the Cloudflare dashboard; the binding name is used in functions.
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "the-outfit-lab-images"

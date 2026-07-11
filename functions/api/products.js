@@ -1,0 +1,134 @@
+import { handleOptions, jsonResponse, methodNotAllowedResponse } from "../_shared.js";
+
+const DEFAULT_LIMIT = 24;
+const MAX_LIMIT = 100;
+
+function parseIntParam(value, fallback) {
+  const n = parseInt(value, 10);
+  return Number.isNaN(n) ? fallback : n;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), min > max ? value : max);
+}
+
+export async function onRequestGet(context) {
+  const { env, request } = context;
+  const url = new URL(request.url);
+
+  // Pagination
+  let page = parseIntParam(url.searchParams.get("page"), 1);
+  let limit = parseIntParam(url.searchParams.get("limit"), DEFAULT_LIMIT);
+  page = Math.max(1, page);
+  limit = clamp(limit, 1, MAX_LIMIT);
+  const offset = (page - 1) * limit;
+
+  // Filters
+  const category = url.searchParams.get("category");
+  const brand = url.searchParams.get("brand");
+  const gender = url.searchParams.get("gender");
+  const q = url.searchParams.get("q");
+  const minPrice = url.searchParams.get("minPrice");
+  const maxPrice = url.searchParams.get("maxPrice");
+  const size = url.searchParams.get("size");
+  const colorway = url.searchParams.get("colorway");
+  const sort = url.searchParams.get("sort") || "newest";
+
+  const whereClauses = ["deleted_at IS NULL"];
+  const bindings = [];
+
+  if (category) {
+    whereClauses.push("category_id = ?");
+    bindings.push(category);
+  }
+
+  if (brand) {
+    whereClauses.push("brand = ?");
+    bindings.push(brand);
+  }
+
+  if (gender) {
+    whereClauses.push("gender = ?");
+    bindings.push(gender);
+  }
+
+  if (minPrice !== null && minPrice !== "") {
+    const min = parseIntParam(minPrice, null);
+    if (min !== null) {
+      whereClauses.push("price >= ?");
+      bindings.push(min);
+    }
+  }
+
+  if (maxPrice !== null && maxPrice !== "") {
+    const max = parseIntParam(maxPrice, null);
+    if (max !== null) {
+      whereClauses.push("price <= ?");
+      bindings.push(max);
+    }
+  }
+
+  if (q) {
+    whereClauses.push("(name LIKE ? OR sku LIKE ? OR description LIKE ?)");
+    const pattern = `%${q}%`;
+    bindings.push(pattern, pattern, pattern);
+  }
+
+  // Variant-based filters use EXISTS subqueries.
+  if (size) {
+    whereClauses.push(
+      "EXISTS (SELECT 1 FROM variants WHERE variants.product_id = products.id AND variants.size_key LIKE ?)"
+    );
+    bindings.push(`%${size}%`);
+  }
+
+  if (colorway) {
+    whereClauses.push(
+      "EXISTS (SELECT 1 FROM variants WHERE variants.product_id = products.id AND variants.colorway = ?)"
+    );
+    bindings.push(colorway);
+  }
+
+  const where = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  const orderBy = {
+    newest: "created_at DESC",
+    price_asc: "price ASC",
+    price_desc: "price DESC",
+    name_asc: "name ASC",
+  }[sort] || "created_at DESC";
+
+  // Count total matching products.
+  const countSql = `SELECT COUNT(*) as total FROM products ${where}`;
+  const countStmt = env.DB.prepare(countSql).bind(...bindings);
+  const { results: countResults } = await countStmt.all();
+  const total = countResults[0]?.total || 0;
+
+  // Fetch page of products.
+  const selectSql = `
+    SELECT id, category_id, brand, gender, sku, name, description, price, images, details, size_chart, created_at
+    FROM products
+    ${where}
+    ORDER BY ${orderBy}
+    LIMIT ? OFFSET ?
+  `;
+  const selectStmt = env.DB.prepare(selectSql).bind(...bindings, limit, offset);
+  const { results } = await selectStmt.all();
+
+  const products = results.map((p) => ({
+    ...p,
+    images: JSON.parse(p.images),
+    details: JSON.parse(p.details),
+    size_chart: JSON.parse(p.size_chart),
+  }));
+
+  return jsonResponse({ products, total, page, limit });
+}
+
+export async function onRequestOptions() {
+  return handleOptions();
+}
+
+export async function onRequest(context) {
+  return methodNotAllowedResponse();
+}
