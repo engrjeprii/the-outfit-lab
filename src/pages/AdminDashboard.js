@@ -406,15 +406,76 @@ function ProductManager({ categories }) {
         <div className="page-status">Loading...</div>
       ) : (
         <>
-          <div className="product-list">
-            {products.map((p) => (
-              <ProductListItem
-                key={p.id}
-                product={p}
-                onEdit={() => handleEdit(p)}
-                onRequestDelete={setDeleteConfirm}
-              />
-            ))}
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Category</th>
+                  <th>Brand</th>
+                  <th>Gender</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="empty-cell">No products found.</td>
+                  </tr>
+                )}
+                {products.map((p) => {
+                  const category = categories.find((c) => c.id === p.category_id);
+                  const stockText = p.variant_count
+                    ? `${p.total_stock || 0} in stock · ${p.variant_count} variant${p.variant_count !== 1 ? "s" : ""}`
+                    : "No variants";
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <img
+                          src={p.images[0]}
+                          alt={p.name}
+                          style={{
+                            width: "48px",
+                            height: "48px",
+                            objectFit: "cover",
+                            borderRadius: "var(--radius)",
+                          }}
+                        />
+                      </td>
+                      <td>{p.name}</td>
+                      <td>{p.sku}</td>
+                      <td>{category?.name || p.category_id}</td>
+                      <td>{p.brand}</td>
+                      <td>{p.gender}</td>
+                      <td>{formatPrice(p.price)}</td>
+                      <td>{stockText}</td>
+                      <td>
+                        <button
+                          className="btn btn-secondary icon-only-mobile"
+                          onClick={() => handleEdit(p)}
+                          aria-label="Edit"
+                        >
+                          <EditIcon />
+                          <span className="btn-text">Edit</span>
+                        </button>
+                        <button
+                          className="btn btn-danger icon-only-mobile"
+                          onClick={() => setDeleteConfirm(p)}
+                          aria-label="Delete"
+                        >
+                          <DeleteIcon />
+                          <span className="btn-text">Delete</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
           <Pagination
             page={result.page}
@@ -424,41 +485,6 @@ function ProductManager({ categories }) {
           />
         </>
       )}
-    </div>
-  );
-}
-
-function ProductListItem({ product, onEdit, onRequestDelete }) {
-  const stockText = product.variant_count
-    ? `${product.total_stock || 0} in stock · ${product.variant_count} variant${product.variant_count !== 1 ? "s" : ""}`
-    : "No variants";
-
-  return (
-    <div className="product-list-item">
-      <img src={product.images[0]} alt={product.name} />
-      <div className="product-list-info">
-        <h4>{product.name}</h4>
-        <p>{product.sku} · {formatPrice(product.price)}</p>
-        <p className="product-list-stock">{stockText}</p>
-      </div>
-      <div className="product-list-actions">
-        <button
-          className="btn btn-secondary icon-only-mobile"
-          onClick={onEdit}
-          aria-label="Edit"
-        >
-          <EditIcon />
-          <span className="btn-text">Edit</span>
-        </button>
-        <button
-          className="btn btn-danger icon-only-mobile"
-          onClick={() => onRequestDelete(product)}
-          aria-label="Delete"
-        >
-          <DeleteIcon />
-          <span className="btn-text">Delete</span>
-        </button>
-      </div>
     </div>
   );
 }
