@@ -96,12 +96,17 @@ export default function ProductPage() {
     }
   }, [selectedVariant, quantity]);
 
+  const isShoes = product?.category_id === "cat-shoes";
+
+  useEffect(() => {
+    if (isShoes) setSelectedSize("");
+  }, [selectedGender, isShoes]);
+
   if (loading) return <div className="page-status">Loading...</div>;
   if (error) return <div className="page-status error">{error}</div>;
   if (!product) return <div className="page-status">Product not found.</div>;
 
   const colorways = [...new Set(product.variants.map((v) => v.colorway))];
-  const isShoes = product.category_id === "cat-shoes";
   const defaultColorway = !isShoes && colorways.length > 0 ? colorways[0] : null;
 
   // For shoes, derive available genders and sizes from size_chart rows.
@@ -115,9 +120,22 @@ export default function ProductPage() {
     ? product.size_chart
     : [];
 
-  const isVariantAvailable = (sizeKey, colorway) => {
+  const visibleSizes = isShoes
+    ? sizes.filter((row) => {
+        const key = Object.keys(row)
+          .sort()
+          .map((k) => `${k}:${row[k]}`)
+          .join("|");
+        return isVariantAvailable(key, "Default", activeShoeGender);
+      })
+    : sizes;
+
+  const isVariantAvailable = (sizeKey, colorway, gender = null) => {
     const variant = product.variants.find(
-      (v) => v.size_key === sizeKey && v.colorway === colorway
+      (v) =>
+        v.size_key === sizeKey &&
+        v.colorway === colorway &&
+        (gender === null || v.gender === gender)
     );
     return variant && !variant.sold_out && variant.stock_qty > 0;
   };
@@ -214,13 +232,15 @@ export default function ProductPage() {
           <div className="selector-group">
             <label>Size</label>
             <div className="selector-options">
-              {sizes.map((row, idx) => {
+              {visibleSizes.map((row, idx) => {
                 const key = Object.keys(row)
                   .sort()
                   .map((k) => `${k}:${row[k]}`)
                   .join("|");
                 const activeColor = isShoes ? "Default" : defaultColorway || selectedColor;
-                const available = activeColor
+                const available = isShoes
+                  ? true
+                  : activeColor
                   ? isVariantAvailable(key, activeColor)
                   : product.variants.some((v) => v.size_key === key && !v.sold_out && v.stock_qty > 0);
                 return (
