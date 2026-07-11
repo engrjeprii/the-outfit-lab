@@ -9,7 +9,9 @@ const MESSENGER_URL = process.env.REACT_APP_MESSENGER_URL || "https://m.me/theou
 function buildOrderMessage(order) {
   const lines = order.items.map((item) => {
     const size = displaySize(item.size_key);
-    return `- ${item.name} (${size} / ${item.colorway}) x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
+    const color = item.colorway && item.colorway !== "Default" ? ` / ${item.colorway}` : "";
+    const gender = item.gender ? ` / ${item.gender}` : "";
+    return `- ${item.name} (${size}${color}${gender}) x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
   });
 
   return [
@@ -113,7 +115,9 @@ export default function CheckoutPage() {
         {order.items.map((item, idx) => (
           <div key={idx} className="order-summary-item">
             <span>
-              {item.name} ({displaySize(item.size_key)} / {item.colorway}) x
+              {item.name} ({displaySize(item.size_key)}
+              {item.colorway && item.colorway !== "Default" && ` / ${item.colorway}`}
+              {item.gender && ` / ${item.gender}`}) x
               {item.quantity}
             </span>
             <span>{formatPrice(item.price * item.quantity)}</span>

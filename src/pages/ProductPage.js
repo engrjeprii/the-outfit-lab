@@ -116,7 +116,10 @@ export default function ProductPage() {
   const isShoes = product?.category_id === "cat-shoes";
 
   useEffect(() => {
-    if (isShoes) setSelectedSize("");
+    if (isShoes) {
+      setSelectedSize("");
+      setQuantity(1);
+    }
   }, [selectedGender, isShoes]);
 
   if (loading) return <div className="page-status">Loading...</div>;

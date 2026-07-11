@@ -57,7 +57,11 @@ export default function CartPage() {
               <img src={item.image} alt={item.name} className="cart-item-image" />
               <div className="cart-item-meta">
                 <h3>{item.name}</h3>
-                <p>{displaySize(item.size_key)} · {item.colorway}</p>
+                <p>
+                  {displaySize(item.size_key)}
+                  {item.colorway && item.colorway !== "Default" && ` · ${item.colorway}`}
+                  {item.gender && ` · ${item.gender}`}
+                </p>
                 <p className="cart-item-price">{formatPrice(item.price)}</p>
                 <div className="quantity-stepper" style={{ marginTop: "0.75rem" }}>
                   <button
