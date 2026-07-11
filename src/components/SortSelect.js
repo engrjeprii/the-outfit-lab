@@ -45,9 +45,10 @@ export default function SortSelect({
 
   return (
     <div className="sort-bar-custom" ref={containerRef}>
-      <label>{label}</label>
+      {label && <label>{label}</label>}
       <div className="sort-bar-trigger-wrap">
         <button
+          type="button"
           className="sort-bar-trigger"
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="listbox"

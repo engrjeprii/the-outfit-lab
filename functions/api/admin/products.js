@@ -98,26 +98,26 @@ export async function onRequestPost(context) {
       .run();
   }
 
-  // Fetch existing variants to preserve IDs for matching size_key + colorway.
+  // Fetch existing variants to preserve IDs for matching gender + size_key + colorway.
   const { results: existingVariants } = await env.DB.prepare(
-    "SELECT id, size_key, colorway FROM variants WHERE product_id = ?"
+    "SELECT id, gender, size_key, colorway FROM variants WHERE product_id = ?"
   )
     .bind(productId)
     .all();
 
   const variantIdByKey = new Map(
-    existingVariants.map((v) => [`${v.size_key}::${v.colorway}`, v.id])
+    existingVariants.map((v) => [`${v.gender || "unisex"}::${v.size_key}::${v.colorway}`, v.id])
   );
 
   // Build list of incoming variant keys to determine which existing variants to remove.
   const incomingKeys = new Set(
-    validVariants.map((v) => `${v.size_key}::${v.colorway}`)
+    validVariants.map((v) => `${v.gender || "unisex"}::${v.size_key}::${v.colorway}`)
   );
 
   // Soft-remove variants that no longer exist for this product so existing orders can still reference them.
   // We do not hard-delete to avoid breaking historical orders.
   for (const existing of existingVariants) {
-    const key = `${existing.size_key}::${existing.colorway}`;
+    const key = `${existing.gender || "unisex"}::${existing.size_key}::${existing.colorway}`;
     if (!incomingKeys.has(key)) {
       await env.DB.prepare("UPDATE variants SET sold_out = 1, stock_qty = 0 WHERE id = ?")
         .bind(existing.id)
@@ -127,22 +127,23 @@ export async function onRequestPost(context) {
 
   // Upsert variants.
   for (const v of validVariants) {
-    const key = `${v.size_key}::${v.colorway}`;
+    const variantGender = ["men", "women", "unisex"].includes(v.gender) ? v.gender : "unisex";
+    const key = `${variantGender}::${v.size_key}::${v.colorway}`;
     const existingVariantId = variantIdByKey.get(key);
     const stockQty = v.stock_qty ?? 0;
     const soldOut = v.sold_out ? 1 : 0;
 
     if (existingVariantId) {
       await env.DB.prepare(
-        "UPDATE variants SET size_key = ?, colorway = ?, stock_qty = ?, sold_out = ? WHERE id = ?"
+        "UPDATE variants SET gender = ?, size_key = ?, colorway = ?, stock_qty = ?, sold_out = ? WHERE id = ?"
       )
-        .bind(v.size_key, v.colorway, stockQty, soldOut, existingVariantId)
+        .bind(variantGender, v.size_key, v.colorway, stockQty, soldOut, existingVariantId)
         .run();
     } else {
       await env.DB.prepare(
-        "INSERT INTO variants (id, product_id, size_key, colorway, stock_qty, sold_out) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO variants (id, product_id, gender, size_key, colorway, stock_qty, sold_out) VALUES (?, ?, ?, ?, ?, ?, ?)"
       )
-        .bind(generateId(), productId, v.size_key, v.colorway, stockQty, soldOut)
+        .bind(generateId(), productId, variantGender, v.size_key, v.colorway, stockQty, soldOut)
         .run();
     }
   }

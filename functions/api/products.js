@@ -115,11 +115,30 @@ export async function onRequestGet(context) {
   const selectStmt = env.DB.prepare(selectSql).bind(...bindings, limit, offset);
   const { results } = await selectStmt.all();
 
+  const productIds = results.map((p) => p.id);
+  const stockMap = new Map();
+  if (productIds.length > 0) {
+    const placeholders = productIds.map(() => "?").join(",");
+    const { results: stockResults } = await env.DB.prepare(
+      `SELECT product_id, COALESCE(SUM(stock_qty), 0) as total_stock, COUNT(*) as variant_count FROM variants WHERE product_id IN (${placeholders}) GROUP BY product_id`
+    )
+      .bind(...productIds)
+      .all();
+    for (const row of stockResults) {
+      stockMap.set(row.product_id, {
+        total_stock: row.total_stock,
+        variant_count: row.variant_count,
+      });
+    }
+  }
+
   const products = results.map((p) => ({
     ...p,
     images: JSON.parse(p.images),
     details: JSON.parse(p.details),
     size_chart: JSON.parse(p.size_chart),
+    total_stock: stockMap.get(p.id)?.total_stock ?? 0,
+    variant_count: stockMap.get(p.id)?.variant_count ?? 0,
   }));
 
   return jsonResponse({ products, total, page, limit });

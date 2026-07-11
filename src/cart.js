@@ -38,6 +38,7 @@ export function CartProvider({ children }) {
           image: product.images[0] || "",
           size_key: variant.size_key,
           colorway: variant.colorway,
+          gender: variant.gender || product.gender || "unisex",
           price: product.price,
           quantity,
         },

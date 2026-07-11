@@ -8,7 +8,6 @@ const FILTER_LABELS = {
   minPrice: "Min price",
   maxPrice: "Max price",
   size: "Size",
-  colorway: "Colorway",
 };
 
 function formatFilterValue(key, value) {

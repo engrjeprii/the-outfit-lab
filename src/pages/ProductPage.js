@@ -49,6 +49,7 @@ export default function ProductPage() {
   const [product, setProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
+  const [selectedGender, setSelectedGender] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [imageIndex, setImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -71,14 +72,20 @@ export default function ProductPage() {
 
   const selectedVariant = useMemo(() => {
     if (!product) return undefined;
+    if (product.category_id === "cat-shoes") {
+      return product.variants.find(
+        (v) => v.size_key === selectedSize && v.gender === selectedGender
+      );
+    }
     return product.variants.find(
       (v) => v.size_key === selectedSize && v.colorway === selectedColor
     );
-  }, [product, selectedSize, selectedColor]);
+  }, [product, selectedSize, selectedColor, selectedGender]);
 
   useEffect(() => {
     setSelectedSize("");
     setSelectedColor("");
+    setSelectedGender("");
     setQuantity(1);
     setImageIndex(0);
   }, [id]);
@@ -94,7 +101,19 @@ export default function ProductPage() {
   if (!product) return <div className="page-status">Product not found.</div>;
 
   const colorways = [...new Set(product.variants.map((v) => v.colorway))];
-  const sizes = product.size_chart.length > 0 ? product.size_chart : [];
+  const isShoes = product.category_id === "cat-shoes";
+  const defaultColorway = !isShoes && colorways.length > 0 ? colorways[0] : null;
+
+  // For shoes, derive available genders and sizes from size_chart rows.
+  const shoeGenders = isShoes
+    ? [...new Set(product.size_chart.map((row) => row.gender || "unisex"))]
+    : [];
+  const activeShoeGender = selectedGender || shoeGenders[0] || "";
+  const sizes = isShoes
+    ? product.size_chart.filter((row) => (row.gender || "unisex") === activeShoeGender)
+    : product.size_chart.length > 0
+    ? product.size_chart
+    : [];
 
   const isVariantAvailable = (sizeKey, colorway) => {
     const variant = product.variants.find(
@@ -146,26 +165,51 @@ export default function ProductPage() {
           <p className="product-price-large">{formatPrice(product.price)}</p>
           <p className="product-description">{product.description}</p>
 
-          <div className="selector-group">
-            <label>Color</label>
-            <div className="selector-options">
-              {colorways.map((color) => {
-                const available = selectedSize
-                  ? isVariantAvailable(selectedSize, color)
-                  : product.variants.some((v) => v.colorway === color && !v.sold_out && v.stock_qty > 0);
-                return (
-                  <button
-                    key={color}
-                    className={`selector-option ${selectedColor === color ? "active" : ""} ${!available ? "disabled" : ""}`}
-                    onClick={() => available && setSelectedColor(color)}
-                    disabled={!available}
-                  >
-                    {color}
-                  </button>
-                );
-              })}
+          {isShoes && shoeGenders.length > 0 && (
+            <div className="selector-group">
+              <label>Gender Fit</label>
+              <div className="selector-options">
+                {shoeGenders.map((g) => {
+                  const available = product.variants.some(
+                    (v) => v.gender === g && !v.sold_out && v.stock_qty > 0
+                  );
+                  return (
+                    <button
+                      key={g}
+                      className={`selector-option ${activeShoeGender === g ? "active" : ""} ${!available ? "disabled" : ""}`}
+                      onClick={() => available && setSelectedGender(g)}
+                      disabled={!available}
+                    >
+                      {g.charAt(0).toUpperCase() + g.slice(1)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
+
+          {!isShoes && (
+            <div className="selector-group">
+              <label>Color</label>
+              <div className="selector-options">
+                {colorways.map((color) => {
+                  const available = selectedSize
+                    ? isVariantAvailable(selectedSize, color)
+                    : product.variants.some((v) => v.colorway === color && !v.sold_out && v.stock_qty > 0);
+                  return (
+                    <button
+                      key={color}
+                      className={`selector-option ${selectedColor === color ? "active" : ""} ${!available ? "disabled" : ""}`}
+                      onClick={() => available && setSelectedColor(color)}
+                      disabled={!available}
+                    >
+                      {color}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="selector-group">
             <label>Size</label>
@@ -175,8 +219,9 @@ export default function ProductPage() {
                   .sort()
                   .map((k) => `${k}:${row[k]}`)
                   .join("|");
-                const available = selectedColor
-                  ? isVariantAvailable(key, selectedColor)
+                const activeColor = isShoes ? "Default" : defaultColorway || selectedColor;
+                const available = activeColor
+                  ? isVariantAvailable(key, activeColor)
                   : product.variants.some((v) => v.size_key === key && !v.sold_out && v.stock_qty > 0);
                 return (
                   <button

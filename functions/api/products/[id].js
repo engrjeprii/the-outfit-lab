@@ -15,7 +15,7 @@ export async function onRequestGet(context) {
   }
 
   const { results: variants } = await env.DB.prepare(
-    "SELECT id, size_key, colorway, stock_qty, sold_out FROM variants WHERE product_id = ? ORDER BY size_key, colorway"
+    "SELECT id, gender, size_key, colorway, stock_qty, sold_out FROM variants WHERE product_id = ? ORDER BY gender, size_key, colorway"
   )
     .bind(id)
     .all();

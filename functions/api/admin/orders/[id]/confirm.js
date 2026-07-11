@@ -32,10 +32,11 @@ export async function onRequestPost(context) {
         .first();
     }
     if (!variant && item.product_id && item.size_key && item.colorway) {
+      const gender = item.gender || "unisex";
       variant = await env.DB.prepare(
-        "SELECT * FROM variants WHERE product_id = ? AND size_key = ? AND colorway = ?"
+        "SELECT * FROM variants WHERE product_id = ? AND gender = ? AND size_key = ? AND colorway = ?"
       )
-        .bind(item.product_id, item.size_key, item.colorway)
+        .bind(item.product_id, gender, item.size_key, item.colorway)
         .first();
     }
 

@@ -16,7 +16,6 @@ const DEFAULT_FILTERS = {
   minPrice: "",
   maxPrice: "",
   size: "",
-  colorway: "",
   sort: "newest",
   page: 1,
   limit: 24,
@@ -39,7 +38,6 @@ function parseFilters(searchParams) {
     minPrice: searchParams.get("minPrice") || "",
     maxPrice: searchParams.get("maxPrice") || "",
     size: searchParams.get("size") || "",
-    colorway: searchParams.get("colorway") || "",
     sort: searchParams.get("sort") || "newest",
     page: parseInt(searchParams.get("page") || "1", 10),
     limit: parseInt(searchParams.get("limit") || "24", 10),
@@ -71,6 +69,7 @@ export default function CollectionPage() {
   const [result, setResult] = useState({ products: [], total: 0, page: 1, limit: 24 });
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
+  const [filterSizes, setFilterSizes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -85,13 +84,15 @@ export default function CollectionPage() {
       setLoading(true);
       setError("");
       try {
-        const [cats, brandList, prods] = await Promise.all([
+        const [cats, brandList, filterOpts, prods] = await Promise.all([
           api.getCategories(),
           api.getBrands(),
+          api.getFilters({ category: filters.category }),
           api.getProducts(filters),
         ]);
         setCategories(cats || []);
         setBrands(brandList || []);
+        setFilterSizes((filterOpts && filterOpts.sizes) || []);
         setResult(prods || { products: [], total: 0, page: 1, limit: 24 });
       } catch (err) {
         setError(err.message);
@@ -158,6 +159,7 @@ export default function CollectionPage() {
     <FilterPanel
       categories={categories}
       brands={brands}
+      sizes={filterSizes}
       filters={filters}
       onChange={handleFilterChange}
       onClear={handleClearFilters}

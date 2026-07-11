@@ -273,6 +273,21 @@ const mockApi = {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   },
 
+  getFilters: async (options = {}) => {
+    await delay();
+    let list = products.filter((p) => !p.deleted_at);
+    if (options.category) {
+      list = list.filter((p) => p.category_id === options.category);
+    }
+    const colorways = [...new Set(list.flatMap((p) => p.variants.map((v) => v.colorway)))]
+      .filter(Boolean)
+      .sort();
+    const sizes = [...new Set(list.flatMap((p) => p.variants.map((v) => v.size_key)))]
+      .filter(Boolean)
+      .sort();
+    return { colorways, sizes };
+  },
+
   getProducts: async (options = {}) => {
     await delay();
     const {
@@ -297,6 +312,8 @@ const mockApi = {
         details: { ...p.details },
         size_chart: p.size_chart.map((row) => ({ ...row })),
         variants: undefined,
+        total_stock: p.variants.reduce((sum, v) => sum + (v.stock_qty || 0), 0),
+        variant_count: p.variants.length,
       }));
 
     if (category) {
@@ -553,8 +570,9 @@ const mockApi = {
       if (!product) throw new Error(`Product not found: ${item.name}`);
       let variant = product.variants.find((v) => v.id === item.variant_id);
       if (!variant && item.size_key && item.colorway) {
+        const gender = item.gender || "unisex";
         variant = product.variants.find(
-          (v) => v.size_key === item.size_key && v.colorway === item.colorway
+          (v) => v.gender === gender && v.size_key === item.size_key && v.colorway === item.colorway
         );
       }
       if (!variant) throw new Error(`Variant not found: ${item.name}`);
@@ -631,6 +649,13 @@ const realApi = {
 
   getBrandSummaries: async () => {
     return apiRequest("/brands");
+  },
+
+  getFilters: async (options = {}) => {
+    const params = new URLSearchParams();
+    if (options.category) params.set("category", options.category);
+    const query = params.toString();
+    return apiRequest(`/filters${query ? `?${query}` : ""}`);
   },
 
   getProducts: async (options = {}) => {

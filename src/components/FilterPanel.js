@@ -1,18 +1,11 @@
 import React, { useMemo, useState } from "react";
 
-const COLOR_SWATCHES = [
-  { name: "White", hex: "#ffffff" },
-  { name: "Black", hex: "#111111" },
-  { name: "Beige", hex: "#d8c8b8" },
-  { name: "Gray", hex: "#9ca3af" },
-  { name: "Navy", hex: "#1e3a5f" },
-  { name: "Olive", hex: "#556b2f" },
-  { name: "Khaki", hex: "#c3b091" },
-  { name: "Tan", hex: "#d2b48c" },
-  { name: "Blue", hex: "#3b82f6" },
-];
-
-const COMMON_SIZES = ["XS", "S", "M", "L", "XL", "30", "32", "34", "8", "9", "10", "OS"];
+function displaySizeLabel(sizeKey) {
+  if (!sizeKey) return "";
+  const parts = sizeKey.split("|");
+  if (parts.length === 1) return parts[0].split(":")[1] || sizeKey;
+  return parts.map((p) => p.split(":")[1]).join(" / ");
+}
 
 function clampPrice(value) {
   if (value === "" || value === undefined || value === null) return "";
@@ -27,6 +20,7 @@ export default function FilterPanel({
   filters,
   onChange,
   onClear,
+  sizes = [],
 }) {
   const [touched, setTouched] = useState({});
 
@@ -37,10 +31,6 @@ export default function FilterPanel({
   const handlePriceChange = (key, value) => {
     const next = { ...filters, [key]: clampPrice(value), page: 1 };
     onChange(next);
-  };
-
-  const toggleColor = (color) => {
-    handleChange("colorway", filters.colorway === color ? "" : color);
   };
 
   const toggleSize = (size) => {
@@ -181,36 +171,38 @@ export default function FilterPanel({
         )}
       </div>
 
-      <div className="filter-group">
-        <label>Color</label>
-        <div className="color-options">
-          {COLOR_SWATCHES.map((color) => (
-            <button
-              key={color.name}
-              className={`color-swatch ${filters.colorway === color.name ? "active" : ""}`}
-              style={{ backgroundColor: color.hex }}
-              onClick={() => toggleColor(color.name)}
-              aria-label={`Filter by ${color.name}`}
-              title={color.name}
-            />
-          ))}
+      {filters.category ? (
+        sizes.length > 0 ? (
+          <div className="filter-group">
+            <label>Size</label>
+            <div className="size-options">
+              {sizes.map((size) => (
+                <button
+                  key={size}
+                  className={`size-option ${filters.size === size ? "active" : ""}`}
+                  onClick={() => toggleSize(size)}
+                >
+                  {displaySizeLabel(size)}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="filter-group">
+            <label>Size</label>
+            <p className="filter-hint" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+              No sizes for this category.
+            </p>
+          </div>
+        )
+      ) : (
+        <div className="filter-group">
+          <label>Size</label>
+          <p className="filter-hint" style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+            Select a category to see size options.
+          </p>
         </div>
-      </div>
-
-      <div className="filter-group">
-        <label>Size</label>
-        <div className="size-options">
-          {COMMON_SIZES.map((size) => (
-            <button
-              key={size}
-              className={`size-option ${filters.size === size ? "active" : ""}`}
-              onClick={() => toggleSize(size)}
-            >
-              {size}
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       <button className="btn btn-secondary" onClick={onClear}>
         Clear filters

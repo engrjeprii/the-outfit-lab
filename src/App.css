@@ -1247,6 +1247,12 @@ input, select, textarea {
   color: var(--text-muted);
 }
 
+.product-list-stock {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
 .product-list-actions {
   display: flex;
   gap: var(--space-sm);
@@ -1341,6 +1347,16 @@ input, select, textarea {
   flex-wrap: wrap;
 }
 
+.size-row .sort-bar-custom {
+  flex: 1;
+  min-width: 5rem;
+}
+
+.size-row .sort-bar-trigger {
+  min-width: 0;
+  width: 100%;
+}
+
 .size-row input,
 .colorway-input input,
 .variant-row input {
@@ -1357,6 +1373,32 @@ input, select, textarea {
 .variant-row span {
   flex: 1;
   font-size: 0.875rem;
+}
+
+.colorway-stock-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0 var(--space-md);
+}
+
+.colorway-stock-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.8125rem;
+}
+
+.colorway-stock-row .colorway-name {
+  font-weight: 500;
+}
+
+.colorway-stock-row .colorway-total {
+  color: var(--text-muted);
 }
 
 .image-reorder-list {
