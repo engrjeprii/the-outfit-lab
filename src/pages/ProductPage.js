@@ -122,6 +122,10 @@ export default function ProductPage() {
     }
   }, [selectedGender, isShoes]);
 
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedSize]);
+
   if (loading) return <div className="page-status">Loading...</div>;
   if (error) return <div className="page-status error">{error}</div>;
   if (!product) return <div className="page-status">Product not found.</div>;
@@ -274,34 +278,34 @@ export default function ProductPage() {
             </div>
           </div>
 
-          <div className="quantity-row">
-            <label htmlFor="qty">Quantity</label>
-            <div className="quantity-stepper">
-              <button onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</button>
-              <input
-                id="qty"
-                type="number"
-                min={1}
-                max={selectedVariant?.stock_qty || 1}
-                value={quantity}
-                onChange={(e) => {
-                  const max = selectedVariant?.stock_qty || 1;
-                  setQuantity(Math.max(1, Math.min(max, parseInt(e.target.value, 10) || 1)));
-                }}
-              />
-              <button
-                onClick={() => setQuantity((q) => Math.min(q + 1, selectedVariant?.stock_qty || q))}
-                disabled={!selectedVariant || quantity >= selectedVariant?.stock_qty}
-              >
-                +
-              </button>
-            </div>
-            {selectedVariant && (
+          {selectedVariant && (
+            <div className="quantity-row">
+              <label htmlFor="qty">Quantity</label>
+              <div className="quantity-stepper">
+                <button onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</button>
+                <input
+                  id="qty"
+                  type="number"
+                  min={1}
+                  max={selectedVariant?.stock_qty || 1}
+                  value={quantity}
+                  onChange={(e) => {
+                    const max = selectedVariant?.stock_qty || 1;
+                    setQuantity(Math.max(1, Math.min(max, parseInt(e.target.value, 10) || 1)));
+                  }}
+                />
+                <button
+                  onClick={() => setQuantity((q) => Math.min(q + 1, selectedVariant?.stock_qty || q))}
+                  disabled={!selectedVariant || quantity >= selectedVariant?.stock_qty}
+                >
+                  +
+                </button>
+              </div>
               <span className="stock-hint">
                 [remaining stocks {selectedVariant.stock_qty} here]
               </span>
-            )}
-          </div>
+            </div>
+          )}
 
           <button
             className="btn btn-primary btn-large"
