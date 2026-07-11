@@ -5,6 +5,16 @@ import { useCart } from "../cart";
 import { formatPrice } from "../components/ProductCard";
 import { displaySize } from "../components/SizeColorSelector";
 
+function formatShoeSize(sizeKey) {
+  return `[${sizeKey
+    .split("|")
+    .map((part) => {
+      const [k, v] = part.split(":");
+      return `${k.toLowerCase()}-${v}`;
+    })
+    .join(" / ")}]`;
+}
+
 function BackIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -250,7 +260,7 @@ export default function ProductPage() {
                     onClick={() => available && setSelectedSize(key)}
                     disabled={!available}
                   >
-                    {displaySize(key)}
+                    {isShoes ? formatShoeSize(key) : displaySize(key)}
                   </button>
                 );
               })}
@@ -281,7 +291,7 @@ export default function ProductPage() {
             </div>
             {selectedVariant && (
               <span className="stock-hint">
-                {selectedVariant.stock_qty} in stock
+                [remaining stocks {selectedVariant.stock_qty} here]
               </span>
             )}
           </div>
