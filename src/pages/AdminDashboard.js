@@ -61,6 +61,10 @@ function sizeKeyFromRow(row) {
     .join("|");
 }
 
+function shoeSizeKey(row) {
+  return sizeKeyFromRow({ us: row.us, eu: row.eu });
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("products");
@@ -475,7 +479,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
     const rows = product.size_chart || [];
     if (product.category_id === "cat-shoes") {
       return rows.map((row) => {
-        const sizeKey = sizeKeyFromRow(row);
+        const sizeKey = shoeSizeKey(row);
         const existing = (product.variants || []).find((v) => v.size_key === sizeKey);
         return {
           ...row,
@@ -501,7 +505,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
   useEffect(() => {
     if (!isShoes || !category) return;
     const next = sizeChart.map((row) => {
-      const sizeKey = sizeKeyFromRow(row);
+      const sizeKey = shoeSizeKey(row);
       const gender = row.gender || "men";
       const stock = parseInt(row.stock, 10);
       return {

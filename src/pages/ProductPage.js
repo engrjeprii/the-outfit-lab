@@ -15,6 +15,13 @@ function formatShoeSize(sizeKey) {
     .join(" / ")}]`;
 }
 
+function shoeSizeKey(row) {
+  return ["eu", "us"]
+    .map((k) => (row[k] ? `${k}:${row[k]}` : null))
+    .filter(Boolean)
+    .join("|");
+}
+
 function BackIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -142,10 +149,7 @@ export default function ProductPage() {
 
   const visibleSizes = isShoes
     ? sizes.filter((row) => {
-        const key = Object.keys(row)
-          .sort()
-          .map((k) => `${k}:${row[k]}`)
-          .join("|");
+        const key = shoeSizeKey(row);
         return isVariantAvailable(key, "Default", activeShoeGender);
       })
     : sizes;
@@ -243,7 +247,7 @@ export default function ProductPage() {
             <label>Size</label>
             <div className="selector-options">
               {visibleSizes.map((row, idx) => {
-                const key = Object.keys(row)
+                const key = isShoes ? shoeSizeKey(row) : Object.keys(row)
                   .sort()
                   .map((k) => `${k}:${row[k]}`)
                   .join("|");
