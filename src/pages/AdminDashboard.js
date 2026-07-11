@@ -442,20 +442,20 @@ function ProductManager({ categories }) {
                             </div>
                             <div className="admin-product-actions">
                               <button
-                                className="btn btn-secondary icon-only-mobile"
+                                className="icon-btn"
                                 onClick={() => handleEdit(p)}
                                 aria-label="Edit"
+                                title="Edit"
                               >
                                 <EditIcon />
-                                <span className="btn-text">Edit</span>
                               </button>
                               <button
-                                className="btn btn-danger icon-only-mobile"
+                                className="icon-btn"
                                 onClick={() => setDeleteConfirm(p)}
                                 aria-label="Delete"
+                                title="Delete"
                               >
                                 <DeleteIcon />
-                                <span className="btn-text">Delete</span>
                               </button>
                             </div>
                           </div>

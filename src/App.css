@@ -1164,8 +1164,29 @@ input, select, textarea {
 
 .admin-product-actions {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   flex-shrink: 0;
+}
+
+.admin-product-actions .icon-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.admin-product-actions .icon-btn:hover {
+  border-color: var(--text);
+  background: var(--bg);
+}
+
+.admin-product-actions .icon-btn[aria-label="Delete"]:hover {
+  border-color: #c00;
+  color: #c00;
+  background: #fff5f5;
 }
 
 .admin-product-variant-row td {
@@ -1250,19 +1271,6 @@ input, select, textarea {
 
   .admin-variant-line {
     padding-left: 0;
-  }
-
-  .admin-product-actions .icon-only-mobile {
-    min-width: 2.5rem;
-    padding: 0;
-  }
-
-  .admin-product-actions .icon-only-mobile svg {
-    display: block;
-  }
-
-  .admin-product-actions .icon-only-mobile .btn-text {
-    display: none;
   }
 }
 
