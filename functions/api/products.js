@@ -1,4 +1,4 @@
-import { handleOptions, jsonResponse, methodNotAllowedResponse } from "../_shared.js";
+import { handleOptions, jsonResponse, methodNotAllowedResponse, verifyAdminToken } from "../_shared.js";
 
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 100;
@@ -117,6 +117,9 @@ export async function onRequestGet(context) {
 
   const productIds = results.map((p) => p.id);
   const stockMap = new Map();
+  let variantMap = new Map();
+  const isAdmin = verifyAdminToken(request, env);
+
   if (productIds.length > 0) {
     const placeholders = productIds.map(() => "?").join(",");
     const { results: stockResults } = await env.DB.prepare(
@@ -130,6 +133,20 @@ export async function onRequestGet(context) {
         variant_count: row.variant_count,
       });
     }
+
+    if (isAdmin) {
+      const { results: variantResults } = await env.DB.prepare(
+        `SELECT id, product_id, gender, size_key, colorway, stock_qty, sold_out FROM variants WHERE product_id IN (${placeholders}) ORDER BY gender, size_key, colorway`
+      )
+        .bind(...productIds)
+        .all();
+      for (const v of variantResults) {
+        if (!variantMap.has(v.product_id)) {
+          variantMap.set(v.product_id, []);
+        }
+        variantMap.get(v.product_id).push(v);
+      }
+    }
   }
 
   const products = results.map((p) => ({
@@ -139,6 +156,7 @@ export async function onRequestGet(context) {
     size_chart: JSON.parse(p.size_chart),
     total_stock: stockMap.get(p.id)?.total_stock ?? 0,
     variant_count: stockMap.get(p.id)?.variant_count ?? 0,
+    variants: isAdmin ? (variantMap.get(p.id) || []) : undefined,
   }));
 
   return jsonResponse({ products, total, page, limit });

@@ -308,6 +308,8 @@ const mockApi = {
       limit = 24,
     } = options;
 
+    const isAdmin = mockApi.isAdminToken(localStorage.getItem("admin-token") || "");
+
     let list = products
       .filter((p) => !p.deleted_at)
       .map((p) => ({
@@ -315,7 +317,7 @@ const mockApi = {
         images: [...p.images],
         details: { ...p.details },
         size_chart: p.size_chart.map((row) => ({ ...row })),
-        variants: undefined,
+        variants: isAdmin ? p.variants.map((v) => ({ ...v })) : undefined,
         total_stock: p.variants.reduce((sum, v) => sum + (v.stock_qty || 0), 0),
         variant_count: p.variants.length,
       }));
