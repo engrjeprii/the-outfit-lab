@@ -697,6 +697,11 @@ input, select, textarea {
   color: var(--text-muted);
 }
 
+.quantity-row .stock-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 .quantity-stepper {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useCart } from "../cart";
@@ -69,6 +69,13 @@ export default function ProductPage() {
     load();
   }, [id]);
 
+  const selectedVariant = useMemo(() => {
+    if (!product) return undefined;
+    return product.variants.find(
+      (v) => v.size_key === selectedSize && v.colorway === selectedColor
+    );
+  }, [product, selectedSize, selectedColor]);
+
   useEffect(() => {
     setSelectedSize("");
     setSelectedColor("");
@@ -76,16 +83,18 @@ export default function ProductPage() {
     setImageIndex(0);
   }, [id]);
 
+  useEffect(() => {
+    if (selectedVariant && quantity > selectedVariant.stock_qty) {
+      setQuantity(Math.max(1, selectedVariant.stock_qty));
+    }
+  }, [selectedVariant, quantity]);
+
   if (loading) return <div className="page-status">Loading...</div>;
   if (error) return <div className="page-status error">{error}</div>;
   if (!product) return <div className="page-status">Product not found.</div>;
 
   const colorways = [...new Set(product.variants.map((v) => v.colorway))];
   const sizes = product.size_chart.length > 0 ? product.size_chart : [];
-
-  const selectedVariant = product.variants.find(
-    (v) => v.size_key === selectedSize && v.colorway === selectedColor
-  );
 
   const isVariantAvailable = (sizeKey, colorway) => {
     const variant = product.variants.find(
@@ -191,11 +200,25 @@ export default function ProductPage() {
                 id="qty"
                 type="number"
                 min={1}
+                max={selectedVariant?.stock_qty || 1}
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                onChange={(e) => {
+                  const max = selectedVariant?.stock_qty || 1;
+                  setQuantity(Math.max(1, Math.min(max, parseInt(e.target.value, 10) || 1)));
+                }}
               />
-              <button onClick={() => setQuantity((q) => q + 1)}>+</button>
+              <button
+                onClick={() => setQuantity((q) => Math.min(q + 1, selectedVariant?.stock_qty || q))}
+                disabled={!selectedVariant || quantity >= selectedVariant?.stock_qty}
+              >
+                +
+              </button>
             </div>
+            {selectedVariant && (
+              <span className="stock-hint">
+                {selectedVariant.stock_qty} in stock
+              </span>
+            )}
           </div>
 
           <button
