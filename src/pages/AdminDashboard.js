@@ -80,6 +80,33 @@ function shoeSizeKey(row) {
   return sizeKeyFromRow({ us: row.us, eu: row.eu });
 }
 
+function formatShoeSize(sizeKey) {
+  const parts = sizeKey
+    .split("|")
+    .filter((part) => {
+      const [k] = part.split(":");
+      return k === "us" || k === "eu";
+    })
+    .map((part) => {
+      const [k, v] = part.split(":");
+      return `${k.toLowerCase()}-${v}`;
+    })
+    .join(" / ");
+  return parts ? `[${parts}]` : sizeKey;
+}
+
+function formatVariantSize(sizeKey, isShoes) {
+  if (isShoes) return formatShoeSize(sizeKey);
+  const filtered = sizeKey
+    .split("|")
+    .filter((part) => {
+      const [k] = part.split(":");
+      return k !== "gender" && k !== "stock";
+    })
+    .join("|");
+  return displaySize(filtered || sizeKey);
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("products");
@@ -502,7 +529,7 @@ function ProductManager({ categories }) {
                             {p.variants.map((v) => (
                               <tr key={v.id}>
                                 <td>{v.gender || p.gender || "unisex"}</td>
-                                <td>{displaySize(v.size_key)}</td>
+                                <td>{formatVariantSize(v.size_key, isShoes)}</td>
                                 {!isShoes && <td>{v.colorway && v.colorway !== "Default" ? v.colorway : "—"}</td>}
                                 <td className={`text-right ${v.stock_qty <= 0 || v.sold_out ? "out" : ""}`}>
                                   {v.sold_out ? "Sold out" : v.stock_qty}
