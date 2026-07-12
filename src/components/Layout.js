@@ -21,15 +21,6 @@ function CloseIcon() {
   );
 }
 
-function SearchIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M13 13L16.5 16.5" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
 function CartIcon({ count }) {
   return (
     <span className="icon-btn" style={{ position: "relative" }}>
@@ -103,9 +94,6 @@ export default function Layout({ children }) {
               </nav>
 
               <div className="header-actions">
-                <button className="icon-btn" aria-label="Search">
-                  <SearchIcon />
-                </button>
                 <Link to="/cart" className="icon-btn" aria-label="Cart">
                   <CartIcon count={items.reduce((sum, i) => sum + i.quantity, 0)} />
                 </Link>
