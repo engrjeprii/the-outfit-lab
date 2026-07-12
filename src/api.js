@@ -54,11 +54,16 @@ function sizeKeyFromRow(row) {
 }
 
 function normalizeSizeKey(sizeKeyOrRow) {
+  let row;
   if (typeof sizeKeyOrRow === "string") {
-    const row = Object.fromEntries(sizeKeyOrRow.split("|").map((part) => part.split(":")));
-    return sizeKeyFromRow(row);
+    row = Object.fromEntries(sizeKeyOrRow.split("|").map((part) => part.split(":")));
+  } else {
+    row = sizeKeyOrRow || {};
   }
-  return sizeKeyFromRow(sizeKeyOrRow || {});
+  const filtered = Object.fromEntries(
+    Object.entries(row).filter(([k]) => k && k !== "gender" && k !== "stock")
+  );
+  return sizeKeyFromRow(filtered);
 }
 
 const placeholderImage = (text) =>
@@ -493,6 +498,28 @@ const mockApi = {
     }
     const now = new Date().toISOString();
 
+    // Normalize incoming variants and merge duplicates by size_key + colorway.
+    const incomingVariants = (product.variants || [])
+      .map((v) => ({
+        ...v,
+        size_key: normalizeSizeKey(v.size_key || v.size_row || {}),
+        colorway: v.colorway,
+      }))
+      .filter((v) => v.size_key && v.colorway);
+
+    const mergedMap = new Map();
+    for (const v of incomingVariants) {
+      const key = `${v.size_key}::${v.colorway}`;
+      const existing = mergedMap.get(key);
+      if (existing) {
+        existing.stock_qty = (existing.stock_qty ?? 0) + (v.stock_qty ?? 0);
+        if (!v.sold_out) existing.sold_out = false;
+      } else {
+        mergedMap.set(key, { ...v });
+      }
+    }
+    const mergedVariants = Array.from(mergedMap.values());
+
     let existing = products.find((p) => p.sku === product.sku);
     if (existing) {
       existing.category_id = product.category_id;
@@ -509,25 +536,22 @@ const mockApi = {
       const existingVariantIds = new Map(
         existing.variants.map((v) => [`${normalizeSizeKey(v.size_key)}::${v.colorway}`, v.id])
       );
-      existing.variants = (product.variants || []).map((v) => {
-        const size_key = normalizeSizeKey(v.size_key || v.size_row || {});
-        return {
-          id: existingVariantIds.get(`${size_key}::${v.colorway}`) || v.id || generateId(),
-          product_id: existing.id,
-          size_key,
-          colorway: v.colorway,
-          stock_qty: v.stock_qty ?? 0,
-          sold_out: v.sold_out ? 1 : 0,
-        };
-      });
+      existing.variants = mergedVariants.map((v) => ({
+        id: existingVariantIds.get(`${v.size_key}::${v.colorway}`) || v.id || generateId(),
+        product_id: existing.id,
+        size_key: v.size_key,
+        colorway: v.colorway,
+        stock_qty: v.stock_qty ?? 0,
+        sold_out: v.sold_out ? 1 : 0,
+      }));
       return { id: existing.id, sku: existing.sku, name: existing.name, updated: true };
     }
 
     const id = generateId();
-    const variants = (product.variants || []).map((v) => ({
+    const variants = mergedVariants.map((v) => ({
       id: v.id || generateId(),
       product_id: id,
-      size_key: normalizeSizeKey(v.size_key || v.size_row || {}),
+      size_key: v.size_key,
       colorway: v.colorway,
       stock_qty: v.stock_qty ?? 0,
       sold_out: v.sold_out ? 1 : 0,

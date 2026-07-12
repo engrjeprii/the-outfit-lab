@@ -4,6 +4,18 @@ function generateId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Strip non-size dimensions (gender, stock) from a size_key and re-normalize it.
+ */
+function normalizeSizeKey(sizeKey) {
+  if (!sizeKey) return "";
+  const parts = sizeKey.split("|").filter((part) => {
+    const [k] = part.split(":");
+    return k && k !== "gender" && k !== "stock";
+  });
+  return sizeKeyFromRow(Object.fromEntries(parts.map((part) => part.split(":"))));
+}
+
 export async function onRequestPost(context) {
   const { env, request } = context;
   const authError = requireAdmin(request, env);
@@ -38,16 +50,34 @@ export async function onRequestPost(context) {
   const now = new Date().toISOString();
 
   // Validate that at least one complete variant is provided.
-  const validVariants = variants
+  // Normalize size_key by removing legacy gender/stock fields and merge duplicates.
+  const normalizedVariants = variants
     .map((v) => {
-      const size_key = sizeKeyFromRow(
-        v.size_key
-          ? Object.fromEntries(v.size_key.split("|").map((part) => part.split(":")))
-          : v.size_row || {}
-      );
-      return { ...v, size_key };
+      const size_key = v.size_key
+        ? normalizeSizeKey(v.size_key)
+        : sizeKeyFromRow(
+            Object.fromEntries(
+              Object.entries(v.size_row || {}).filter(([k]) => k !== "gender" && k !== "stock")
+            )
+          );
+      const variantGender = ["men", "women", "unisex"].includes(v.gender) ? v.gender : "unisex";
+      return { ...v, size_key, gender: variantGender };
     })
     .filter((v) => v.size_key && v.colorway);
+
+  const mergedMap = new Map();
+  for (const v of normalizedVariants) {
+    const key = `${v.gender}::${v.size_key}::${v.colorway}`;
+    const existing = mergedMap.get(key);
+    if (existing) {
+      existing.stock_qty = (existing.stock_qty ?? 0) + (v.stock_qty ?? 0);
+      if (!v.sold_out) existing.sold_out = false;
+    } else {
+      mergedMap.set(key, { ...v });
+    }
+  }
+  const validVariants = Array.from(mergedMap.values());
+
   if (validVariants.length === 0) {
     return errorResponse("At least one size and colorway variant is required", 400);
   }
@@ -98,26 +128,31 @@ export async function onRequestPost(context) {
       .run();
   }
 
-  // Fetch existing variants to preserve IDs for matching gender + size_key + colorway.
+  // Fetch existing variants to preserve IDs for matching gender + normalized size_key + colorway.
   const { results: existingVariants } = await env.DB.prepare(
     "SELECT id, gender, size_key, colorway FROM variants WHERE product_id = ?"
   )
     .bind(productId)
     .all();
 
+  const normalizedExisting = existingVariants.map((v) => ({
+    ...v,
+    normalized_size_key: normalizeSizeKey(v.size_key),
+  }));
+
   const variantIdByKey = new Map(
-    existingVariants.map((v) => [`${v.gender || "unisex"}::${v.size_key}::${v.colorway}`, v.id])
+    normalizedExisting.map((v) => [`${v.gender || "unisex"}::${v.normalized_size_key}::${v.colorway}`, v.id])
   );
 
   // Build list of incoming variant keys to determine which existing variants to remove.
   const incomingKeys = new Set(
-    validVariants.map((v) => `${v.gender || "unisex"}::${v.size_key}::${v.colorway}`)
+    validVariants.map((v) => `${v.gender}::${v.size_key}::${v.colorway}`)
   );
 
   // Soft-remove variants that no longer exist for this product so existing orders can still reference them.
   // We do not hard-delete to avoid breaking historical orders.
-  for (const existing of existingVariants) {
-    const key = `${existing.gender || "unisex"}::${existing.size_key}::${existing.colorway}`;
+  for (const existing of normalizedExisting) {
+    const key = `${existing.gender || "unisex"}::${existing.normalized_size_key}::${existing.colorway}`;
     if (!incomingKeys.has(key)) {
       await env.DB.prepare("UPDATE variants SET sold_out = 1, stock_qty = 0 WHERE id = ?")
         .bind(existing.id)
@@ -127,8 +162,7 @@ export async function onRequestPost(context) {
 
   // Upsert variants.
   for (const v of validVariants) {
-    const variantGender = ["men", "women", "unisex"].includes(v.gender) ? v.gender : "unisex";
-    const key = `${variantGender}::${v.size_key}::${v.colorway}`;
+    const key = `${v.gender}::${v.size_key}::${v.colorway}`;
     const existingVariantId = variantIdByKey.get(key);
     const stockQty = v.stock_qty ?? 0;
     const soldOut = v.sold_out ? 1 : 0;
@@ -137,13 +171,13 @@ export async function onRequestPost(context) {
       await env.DB.prepare(
         "UPDATE variants SET gender = ?, size_key = ?, colorway = ?, stock_qty = ?, sold_out = ? WHERE id = ?"
       )
-        .bind(variantGender, v.size_key, v.colorway, stockQty, soldOut, existingVariantId)
+        .bind(v.gender, v.size_key, v.colorway, stockQty, soldOut, existingVariantId)
         .run();
     } else {
       await env.DB.prepare(
         "INSERT INTO variants (id, product_id, gender, size_key, colorway, stock_qty, sold_out) VALUES (?, ?, ?, ?, ?, ?, ?)"
       )
-        .bind(generateId(), productId, variantGender, v.size_key, v.colorway, stockQty, soldOut)
+        .bind(generateId(), productId, v.gender, v.size_key, v.colorway, stockQty, soldOut)
         .run();
     }
   }
