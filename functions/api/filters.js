@@ -1,4 +1,4 @@
-import { handleOptions, jsonResponse, methodNotAllowedResponse } from "../_shared.js";
+import { handleOptions, jsonResponse, methodNotAllowedResponse, normalizeSizeKey } from "../_shared.js";
 
 export async function onRequestGet(context) {
   const { env, request } = context;
@@ -45,7 +45,7 @@ export async function onRequestGet(context) {
   ]);
 
   const colorways = colorResults.map((r) => r.colorway);
-  const sizes = sizeResults.map((r) => r.size_key);
+  const sizes = [...new Set(sizeResults.map((r) => normalizeSizeKey(r.size_key)).filter(Boolean))].sort();
 
   return jsonResponse({ colorways, sizes });
 }

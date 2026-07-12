@@ -1,4 +1,10 @@
-import { handleOptions, jsonResponse, methodNotAllowedResponse, notFoundResponse } from "../../_shared.js";
+import {
+  handleOptions,
+  jsonResponse,
+  methodNotAllowedResponse,
+  notFoundResponse,
+  mergeDuplicateVariants,
+} from "../../_shared.js";
 
 export async function onRequestGet(context) {
   const { env, params } = context;
@@ -20,12 +26,14 @@ export async function onRequestGet(context) {
     .bind(id)
     .all();
 
+  const mergedVariants = mergeDuplicateVariants(variants);
+
   return jsonResponse({
     ...product,
     images: JSON.parse(product.images),
     details: JSON.parse(product.details),
     size_chart: JSON.parse(product.size_chart),
-    variants,
+    variants: mergedVariants,
   });
 }
 

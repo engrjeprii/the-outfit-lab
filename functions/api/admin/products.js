@@ -1,19 +1,15 @@
-import { errorResponse, handleOptions, jsonResponse, methodNotAllowedResponse, requireAdmin, sizeKeyFromRow } from "../../_shared.js";
+import {
+  errorResponse,
+  handleOptions,
+  jsonResponse,
+  methodNotAllowedResponse,
+  requireAdmin,
+  sizeKeyFromRow,
+  normalizeSizeKey,
+} from "../../_shared.js";
 
 function generateId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/**
- * Strip non-size dimensions (gender, stock) from a size_key and re-normalize it.
- */
-function normalizeSizeKey(sizeKey) {
-  if (!sizeKey) return "";
-  const parts = sizeKey.split("|").filter((part) => {
-    const [k] = part.split(":");
-    return k && k !== "gender" && k !== "stock";
-  });
-  return sizeKeyFromRow(Object.fromEntries(parts.map((part) => part.split(":"))));
 }
 
 export async function onRequestPost(context) {

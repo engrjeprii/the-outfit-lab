@@ -75,9 +75,39 @@ export function displaySize(sizeKey) {
 }
 
 /**
- * Verify an admin Authorization header against the ADMIN_PASSWORD env var.
- * Returns true if the token matches.
+ * Strip non-size dimensions (gender, stock) from a size_key and re-normalize it.
  */
+export function normalizeSizeKey(sizeKey) {
+  if (!sizeKey) return "";
+  const parts = sizeKey.split("|").filter((part) => {
+    const [k] = part.split(":");
+    return k && k !== "gender" && k !== "stock";
+  });
+  return sizeKeyFromRow(Object.fromEntries(parts.map((part) => part.split(":"))));
+}
+
+/**
+ * Merge duplicate variants that share the same gender + normalized size_key + colorway.
+ * Sums stock and keeps the variant as available unless all duplicates are sold out.
+ */
+export function mergeDuplicateVariants(variants) {
+  const map = new Map();
+  for (const v of variants) {
+    const size_key = normalizeSizeKey(v.size_key);
+    const gender = v.gender || "unisex";
+    const colorway = v.colorway || "Default";
+    const key = `${v.product_id || ""}::${gender}::${size_key}::${colorway}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.stock_qty = (existing.stock_qty || 0) + (v.stock_qty || 0);
+      if (!v.sold_out) existing.sold_out = false;
+      if (v.id < existing.id) existing.id = v.id;
+    } else {
+      map.set(key, { ...v, size_key, gender, colorway });
+    }
+  }
+  return Array.from(map.values());
+}
 export function verifyAdminToken(request, env) {
   const auth = request.headers.get("Authorization") || "";
   const token = auth.replace(/^Bearer\s+/i, "");

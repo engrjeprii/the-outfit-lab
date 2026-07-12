@@ -1,4 +1,10 @@
-import { handleOptions, jsonResponse, methodNotAllowedResponse, verifyAdminToken } from "../_shared.js";
+import {
+  handleOptions,
+  jsonResponse,
+  methodNotAllowedResponse,
+  verifyAdminToken,
+  mergeDuplicateVariants,
+} from "../_shared.js";
 
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 100;
@@ -144,7 +150,7 @@ export async function onRequestGet(context) {
       )
         .bind(...productIds)
         .all();
-      for (const v of variantResults) {
+      for (const v of mergeDuplicateVariants(variantResults)) {
         if (!variantMap.has(v.product_id)) {
           variantMap.set(v.product_id, []);
         }
