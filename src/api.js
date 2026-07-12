@@ -387,6 +387,14 @@ const mockApi = {
           return b.price - a.price;
         case "name_asc":
           return a.name.localeCompare(b.name);
+        case "name_desc":
+          return b.name.localeCompare(a.name);
+        case "oldest":
+          return new Date(a.created_at) - new Date(b.created_at);
+        case "stock_asc":
+          return a.total_stock - b.total_stock;
+        case "stock_desc":
+          return b.total_stock - a.total_stock;
         case "newest":
         default:
           return new Date(b.created_at) - new Date(a.created_at);

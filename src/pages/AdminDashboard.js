@@ -291,6 +291,31 @@ function ProductManager({ categories }) {
     loadProducts();
   };
 
+  const productSort = useMemo(() => {
+    const map = {
+      newest: { column: "created_at", direction: "desc" },
+      oldest: { column: "created_at", direction: "asc" },
+      name_asc: { column: "name", direction: "asc" },
+      name_desc: { column: "name", direction: "desc" },
+      price_asc: { column: "price", direction: "asc" },
+      price_desc: { column: "price", direction: "desc" },
+      stock_asc: { column: "stock", direction: "asc" },
+      stock_desc: { column: "stock", direction: "desc" },
+    };
+    return map[filters.sort] || { column: "created_at", direction: "desc" };
+  }, [filters.sort]);
+
+  const handleSort = (column) => {
+    const map = {
+      created_at: { asc: "oldest", desc: "newest" },
+      name: { asc: "name_asc", desc: "name_desc" },
+      price: { asc: "price_asc", desc: "price_desc" },
+      stock: { asc: "stock_asc", desc: "stock_desc" },
+    };
+    const nextDir = productSort.column === column && productSort.direction === "asc" ? "desc" : "asc";
+    handleFilterChange("sort", map[column][nextDir]);
+  };
+
   const toggleExpanded = (id) => {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -351,9 +376,13 @@ function ProductManager({ categories }) {
           value={filters.sort}
           options={[
             { value: "newest", label: "Newest" },
+            { value: "oldest", label: "Oldest" },
+            { value: "name_asc", label: "Name: A-Z" },
+            { value: "name_desc", label: "Name: Z-A" },
             { value: "price_asc", label: "Price: Low to High" },
             { value: "price_desc", label: "Price: High to Low" },
-            { value: "name_asc", label: "Name: A-Z" },
+            { value: "stock_asc", label: "Stock: Low to High" },
+            { value: "stock_desc", label: "Stock: High to Low" },
           ]}
           onChange={(value) => handleFilterChange("sort", value)}
         />
@@ -461,6 +490,12 @@ function ProductManager({ categories }) {
         <div className="page-status">Loading...</div>
       ) : (
         <>
+          <div className="admin-product-list-header">
+            <SortHeader column="name" label="Product" sort={productSort} onSort={handleSort} />
+            <SortHeader column="price" label="Price" sort={productSort} onSort={handleSort} />
+            <SortHeader column="stock" label="Stock" sort={productSort} onSort={handleSort} />
+            <span className="admin-product-list-header-actions">Actions</span>
+          </div>
           <div className="admin-product-collapsible-list">
             {products.length === 0 && (
               <p className="empty-cell">No products found.</p>
@@ -486,10 +521,15 @@ function ProductManager({ categories }) {
                       <div className="admin-product-text">
                         <span className="admin-product-name">{p.name}</span>
                         <span className="admin-product-meta">
-                          {p.sku} · {category?.name || p.category_id} · {formatPrice(p.price)} ·{" "}
-                          {p.total_stock || 0} in stock
+                          {p.sku} · {category?.name || p.category_id}
                         </span>
                       </div>
+                    </div>
+                    <div className="admin-product-collapsible-col admin-product-collapsible-price">
+                      {formatPrice(p.price)}
+                    </div>
+                    <div className="admin-product-collapsible-col admin-product-collapsible-stock">
+                      {p.total_stock || 0}
                     </div>
                     <div className="admin-product-actions" onClick={(e) => e.stopPropagation()}>
                       <button

@@ -92,11 +92,15 @@ export async function onRequestGet(context) {
   const where = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
   const orderBy = {
-    newest: "created_at DESC",
-    price_asc: "price ASC",
-    price_desc: "price DESC",
-    name_asc: "name ASC",
-  }[sort] || "created_at DESC";
+    newest: "products.created_at DESC",
+    oldest: "products.created_at ASC",
+    price_asc: "products.price ASC",
+    price_desc: "products.price DESC",
+    name_asc: "products.name ASC",
+    name_desc: "products.name DESC",
+    stock_asc: "(SELECT COALESCE(SUM(stock_qty), 0) FROM variants WHERE variants.product_id = products.id) ASC",
+    stock_desc: "(SELECT COALESCE(SUM(stock_qty), 0) FROM variants WHERE variants.product_id = products.id) DESC",
+  }[sort] || "products.created_at DESC";
 
   // Count total matching products.
   const countSql = `SELECT COUNT(*) as total FROM products ${where}`;
