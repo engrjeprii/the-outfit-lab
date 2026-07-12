@@ -747,8 +747,43 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
     e.preventDefault();
     setError("");
 
-    if (variants.length === 0) {
-      setError("Add at least one colorway with sizes before saving.");
+    if (!categoryId) {
+      setError("Category is required.");
+      return;
+    }
+
+    if (!brand.trim()) {
+      setError("Brand is required.");
+      return;
+    }
+
+    if (!isShoes && !gender) {
+      setError("Gender is required.");
+      return;
+    }
+
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+
+    if (!description.trim()) {
+      setError("Description is required.");
+      return;
+    }
+
+    if (!price || parseFloat(price) <= 0) {
+      setError("Price must be greater than 0.");
+      return;
+    }
+
+    if (!material.trim() || !fit.trim() || !care.trim()) {
+      setError("Material, fit, and care are required.");
+      return;
+    }
+
+    if (sizeChart.length === 0) {
+      setError("Add at least one size row.");
       return;
     }
 
@@ -759,6 +794,26 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
 
     if (isShoes && sizeChart.some((row) => !row.stock || parseInt(row.stock, 10) <= 0)) {
       setError("Stock must be greater than 0 for every shoe size.");
+      return;
+    }
+
+    if (!isShoes && sizeChart.some((row) => category.size_schema.some((k) => !row[k]))) {
+      setError("All size values are required.");
+      return;
+    }
+
+    if (!isShoes && variants.length === 0) {
+      setError("Add at least one colorway.");
+      return;
+    }
+
+    if (images.length === 0) {
+      setError("Upload at least one product image.");
+      return;
+    }
+
+    if (variants.length === 0) {
+      setError("Add at least one colorway with sizes before saving.");
       return;
     }
 
@@ -804,10 +859,19 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
     <form className="admin-form product-form" onSubmit={handleSubmit}>
       {error && <p className="error">{error}</p>}
 
+      <SortSelect
+        value={categoryId}
+        label="Category *"
+        placeholder="Select category"
+        options={categories.map((c) => ({ value: c.id, label: c.name }))}
+        onChange={handleCategoryChange}
+        required
+      />
+
       <label>SKU <span className="field-hint">(auto-generated)</span></label>
       <input value={sku} readOnly required className="readonly-input" />
 
-      <label>Brand</label>
+      <label>Brand *</label>
       <input
         value={brand}
         onChange={(e) => handleBrandChange(e.target.value)}
@@ -818,7 +882,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       {!isShoes && (
         <SortSelect
           value={gender}
-          label="Gender"
+          label="Gender *"
           placeholder="Select gender"
           options={[
             { value: "men", label: "Men" },
@@ -830,13 +894,13 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         />
       )}
 
-      <label>Name</label>
+      <label>Name *</label>
       <input value={name} onChange={(e) => setName(e.target.value)} required />
 
-      <label>Description</label>
-      <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+      <label>Description *</label>
+      <textarea value={description} onChange={(e) => setDescription(e.target.value)} required />
 
-      <label>Price (PHP)</label>
+      <label>Price (PHP) *</label>
       <input
         type="number"
         step="0.01"
@@ -845,24 +909,15 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         required
       />
 
-      <SortSelect
-        value={categoryId}
-        label="Category"
-        placeholder="Select category"
-        options={categories.map((c) => ({ value: c.id, label: c.name }))}
-        onChange={handleCategoryChange}
-        required
-      />
+      <h4>Details *</h4>
+      <label>Material *</label>
+      <input value={material} onChange={(e) => setMaterial(e.target.value)} required />
+      <label>Fit *</label>
+      <input value={fit} onChange={(e) => setFit(e.target.value)} required />
+      <label>Care *</label>
+      <input value={care} onChange={(e) => setCare(e.target.value)} required />
 
-      <h4>Details</h4>
-      <label>Material</label>
-      <input value={material} onChange={(e) => setMaterial(e.target.value)} />
-      <label>Fit</label>
-      <input value={fit} onChange={(e) => setFit(e.target.value)} />
-      <label>Care</label>
-      <input value={care} onChange={(e) => setCare(e.target.value)} />
-
-      <h4>Size Chart</h4>
+      <h4>Size Chart *</h4>
       {category && sizeChart.map((row, idx) => (
         <div key={idx} className="size-row">
           {isShoes ? (
@@ -878,27 +933,30 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
                 onChange={(value) => updateShoeRowGender(idx, value)}
               />
               <input
-                placeholder="US / EU"
+                placeholder="US / EU *"
                 value={row.us || row.eu ? `${row.us || ""} / ${row.eu || ""}` : ""}
                 onChange={(e) => updateShoeSizePair(idx, e.target.value)}
                 className="shoe-size-pair-input"
+                required
               />
               <input
                 type="number"
                 min={1}
-                placeholder="Stock"
+                placeholder="Stock *"
                 value={row.stock}
                 onChange={(e) => updateShoeRowStock(idx, e.target.value)}
                 className="shoe-stock-input"
+                required
               />
             </>
           ) : (
             category.size_schema.map((k) => (
               <input
                 key={k}
-                placeholder={k.toUpperCase()}
+                placeholder={`${k.toUpperCase()} *`}
                 value={row[k] || ""}
                 onChange={(e) => updateSizeRow(idx, k, e.target.value)}
+                required
               />
             ))
           )}
@@ -911,21 +969,23 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         Add Size Row
       </button>
 
-      {!isShoes && <h4>Colorways & Stock</h4>}
+      {!isShoes && <h4>Colorways & Stock *</h4>}
       {!isShoes && (
         <div className="colorway-input">
           <input
-            placeholder="New colorway, e.g. Black"
+            placeholder="New colorway, e.g. Black *"
             value={colorwayInput}
             onChange={(e) => setColorwayInput(e.target.value)}
+            required
           />
           <input
             type="number"
             min={0}
-            placeholder="Initial stock"
+            placeholder="Initial stock *"
             value={initialStock}
             onChange={(e) => setInitialStock(Math.max(0, parseInt(e.target.value, 10) || 0))}
             title="Initial stock per size for this colorway"
+            required
           />
           <button type="button" className="btn btn-secondary" onClick={addColorway}>
             Add Colorway
@@ -962,10 +1022,12 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
               <input
                 type="number"
                 min={0}
+                placeholder="Stock *"
                 value={v.stock_qty}
                 onChange={(e) =>
                   updateVariant(idx, { stock_qty: parseInt(e.target.value) || 0 })
                 }
+                required
               />
               <label>
                 <input
@@ -980,7 +1042,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         </div>
       )}
 
-      <h4>Images</h4>
+      <h4>Images *</h4>
       <div className="file-input-wrap">
         <label className="file-input-label">
           <input
