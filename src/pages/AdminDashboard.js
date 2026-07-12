@@ -252,6 +252,8 @@ function ProductManager({ categories }) {
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [expanded, setExpanded] = useState(new Set());
+  const [variantPages, setVariantPages] = useState({});
+  const VARIANT_PAGE_LIMIT = 5;
 
   const loadProducts = useCallback(
     async (overrides = {}) => {
@@ -314,6 +316,10 @@ function ProductManager({ categories }) {
     };
     const nextDir = productSort.column === column && productSort.direction === "asc" ? "desc" : "asc";
     handleFilterChange("sort", map[column][nextDir]);
+  };
+
+  const handleVariantPageChange = (productId, page) => {
+    setVariantPages((prev) => ({ ...prev, [productId]: page }));
   };
 
   const toggleExpanded = (id) => {
@@ -556,28 +562,43 @@ function ProductManager({ categories }) {
                   {isExpanded && (
                     <div className="admin-product-collapsible-body">
                       {p.variants && p.variants.length > 0 ? (
-                        <table className="admin-variant-table">
-                          <thead>
-                            <tr>
-                              <th>Gender</th>
-                              <th>Size</th>
-                              {!isShoes && <th>Color</th>}
-                              <th className="text-right">Stock</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {p.variants.map((v) => (
-                              <tr key={v.id}>
-                                <td>{v.gender || p.gender || "unisex"}</td>
-                                <td>{formatVariantSize(v.size_key, isShoes)}</td>
-                                {!isShoes && <td>{v.colorway && v.colorway !== "Default" ? v.colorway : "—"}</td>}
-                                <td className={`text-right ${v.stock_qty <= 0 || v.sold_out ? "out" : ""}`}>
-                                  {v.sold_out ? "Sold out" : v.stock_qty}
-                                </td>
+                        <>
+                          <table className="admin-variant-table">
+                            <thead>
+                              <tr>
+                                <th>Gender</th>
+                                <th>Size</th>
+                                {!isShoes && <th>Color</th>}
+                                <th className="text-right">Stock</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody>
+                              {p.variants
+                                .slice(
+                                  ((variantPages[p.id] || 1) - 1) * VARIANT_PAGE_LIMIT,
+                                  (variantPages[p.id] || 1) * VARIANT_PAGE_LIMIT
+                                )
+                                .map((v) => (
+                                  <tr key={v.id}>
+                                    <td>{v.gender || p.gender || "unisex"}</td>
+                                    <td>{formatVariantSize(v.size_key, isShoes)}</td>
+                                    {!isShoes && <td>{v.colorway && v.colorway !== "Default" ? v.colorway : "—"}</td>}
+                                    <td className={`text-right ${v.stock_qty <= 0 || v.sold_out ? "out" : ""}`}>
+                                      {v.sold_out ? "Sold out" : v.stock_qty}
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                          {p.variants.length > VARIANT_PAGE_LIMIT && (
+                            <Pagination
+                              page={variantPages[p.id] || 1}
+                              limit={VARIANT_PAGE_LIMIT}
+                              total={p.variants.length}
+                              onPageChange={(page) => handleVariantPageChange(p.id, page)}
+                            />
+                          )}
+                        </>
                       ) : (
                         <p className="admin-variant-empty">No variants.</p>
                       )}
