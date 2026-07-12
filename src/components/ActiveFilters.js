@@ -8,18 +8,23 @@ const FILTER_LABELS = {
   minPrice: "Min price",
   maxPrice: "Max price",
   size: "Size",
+  sort: "Show",
 };
 
 function formatFilterValue(key, value) {
   if (key === "gender") {
     return value.charAt(0).toUpperCase() + value.slice(1);
   }
+  if (key === "sort" && value === "in_cart") {
+    return "In cart";
+  }
   return value;
 }
 
 export default function ActiveFilters({ filters, onRemove }) {
   const active = Object.entries(filters).filter(([key, value]) => {
-    if (key === "page" || key === "limit" || key === "sort") return false;
+    if (key === "page" || key === "limit") return false;
+    if (key === "sort" && value === "newest") return false;
     return value !== "" && value !== undefined && value !== null;
   });
 

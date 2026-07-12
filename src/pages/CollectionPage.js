@@ -118,7 +118,10 @@ export default function CollectionPage() {
   };
 
   const handleRemoveFilter = (key) => {
-    const next = { ...filters, [key]: "", page: 1 };
+    const next = { ...filters, [key]: key === "sort" ? "newest" : "", page: 1 };
+    if (key === "sort") {
+      next.limit = DEFAULT_FILTERS.limit;
+    }
     setSearchParams(filtersToSearchParams(next));
   };
 
@@ -132,7 +135,12 @@ export default function CollectionPage() {
   };
 
   const handleSortChange = (sort) => {
-    const next = { ...filters, sort, page: 1 };
+    const next = {
+      ...filters,
+      sort,
+      page: 1,
+      limit: sort === "in_cart" ? 100 : DEFAULT_FILTERS.limit,
+    };
     setSearchParams(filtersToSearchParams(next));
   };
 
@@ -146,14 +154,14 @@ export default function CollectionPage() {
     [items]
   );
 
-  const sortedProducts = useMemo(() => {
-    if (filters.sort !== "in_cart") return result.products;
-    return [...result.products].sort((a, b) => {
-      const aInCart = cartProductIds.has(a.id) ? 1 : 0;
-      const bInCart = cartProductIds.has(b.id) ? 1 : 0;
-      return bInCart - aInCart;
-    });
-  }, [result.products, filters.sort, cartProductIds]);
+  const isInCartFilter = filters.sort === "in_cart";
+
+  const displayProducts = useMemo(() => {
+    if (!isInCartFilter) return result.products;
+    return result.products.filter((p) => cartProductIds.has(p.id));
+  }, [result.products, isInCartFilter, cartProductIds]);
+
+  const displayTotal = isInCartFilter ? displayProducts.length : result.total;
 
   const filterPanel = (
     <FilterPanel
@@ -201,7 +209,7 @@ export default function CollectionPage() {
         <div className="collection-results">
           <div className="sort-bar">
             <SortSelect
-              label="Sort by"
+              label="Show"
               options={SORT_OPTIONS}
               value={filters.sort}
               onChange={handleSortChange}
@@ -210,22 +218,24 @@ export default function CollectionPage() {
 
           <ActiveFilters filters={filters} onRemove={handleRemoveFilter} />
           <p className="result-count">
-            {result.total} result{result.total !== 1 ? "s" : ""}
+            {displayTotal} result{displayTotal !== 1 ? "s" : ""}
           </p>
 
-          {sortedProducts.length > 0 ? (
+          {displayProducts.length > 0 ? (
             <>
               <div className="product-grid">
-                {sortedProducts.map((product) => (
+                {displayProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
-              <Pagination
-                page={result.page}
-                limit={result.limit}
-                total={result.total}
-                onPageChange={handlePageChange}
-              />
+              {!isInCartFilter && (
+                <Pagination
+                  page={result.page}
+                  limit={result.limit}
+                  total={result.total}
+                  onPageChange={handlePageChange}
+                />
+              )}
             </>
           ) : (
             <p className="empty">No products match your filters.</p>

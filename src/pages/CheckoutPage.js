@@ -8,7 +8,7 @@ const MESSENGER_URL = process.env.REACT_APP_MESSENGER_URL || "https://m.me/theou
 
 function buildOrderMessage(order) {
   const lines = order.items.map((item) => {
-    const size = displaySize(item.size_key);
+    const size = displaySize(item.size_key, item.gender);
     const color = item.colorway && item.colorway !== "Default" ? ` / ${item.colorway}` : "";
     const gender = item.gender ? ` / ${item.gender}` : "";
     return `- ${item.name} (${size}${color}${gender}) x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
@@ -105,9 +105,9 @@ export default function CheckoutPage() {
           <li>Once payment is received, your order will be marked as confirmed.</li>
         </ol>
         <p className="checkout-warning">
-          <strong>Important:</strong> Orders are held for <strong>24 hours</strong>. If we do not receive your
-          message or payment confirmation within 24 hours, your order will be automatically cancelled
-          and the items may be released to other buyers.
+          <strong>Important:</strong> Your order is held for <strong>24 hours</strong> while we wait for
+          your Messenger message. If we do not hear from you within 24 hours, your order will be
+          automatically cancelled and the items returned to stock for other buyers.
         </p>
       </div>
 
@@ -115,7 +115,7 @@ export default function CheckoutPage() {
         {order.items.map((item, idx) => (
           <div key={idx} className="order-summary-item">
             <span>
-              {item.name} ({displaySize(item.size_key)}
+              {item.name} ({displaySize(item.size_key, item.gender)}
               {item.colorway && item.colorway !== "Default" && ` / ${item.colorway}`}
               {item.gender && ` / ${item.gender}`}) x
               {item.quantity}

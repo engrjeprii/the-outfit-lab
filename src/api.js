@@ -33,7 +33,7 @@ function delay(ms = 0) {
 
 function buildOrderMessage(order) {
   const lines = order.items.map((item) => {
-    const size = displaySize(item.size_key);
+    const size = displaySize(item.size_key, item.gender);
     return `- ${item.name} (${size} / ${item.colorway}) x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
   });
 
@@ -64,6 +64,38 @@ function normalizeSizeKey(sizeKeyOrRow) {
     Object.entries(row).filter(([k]) => k && k !== "gender" && k !== "stock")
   );
   return sizeKeyFromRow(filtered);
+}
+
+function isStalePending(createdAt) {
+  if (!createdAt) return false;
+  const created = new Date(createdAt).getTime();
+  return Date.now() - created > 24 * 60 * 60 * 1000;
+}
+
+function maybeCancelStaleMockOrder(order) {
+  if (!order || order.status !== "pending" || !isStalePending(order.created_at)) {
+    return order;
+  }
+
+  for (const item of order.items) {
+    const product = products.find((p) => p.id === item.product_id);
+    if (!product) continue;
+    let variant = product.variants.find((v) => v.id === item.variant_id);
+    if (!variant && item.size_key && item.colorway) {
+      const gender = item.gender || "unisex";
+      variant = product.variants.find(
+        (v) => v.gender === gender && v.size_key === item.size_key && v.colorway === item.colorway
+      );
+    }
+    if (variant) {
+      variant.stock_qty += item.quantity || 1;
+      if (variant.stock_qty > 0) variant.sold_out = 0;
+    }
+  }
+
+  order.status = "cancelled";
+  order.cancelled_at = new Date().toISOString();
+  return order;
 }
 
 const placeholderImage = (text) =>
@@ -139,7 +171,7 @@ function sizeChartFor(categoryId) {
     case "cat-pants":
       return [{ waist: "30", length: "8" }, { waist: "32", length: "8" }, { waist: "34", length: "8" }];
     case "cat-shoes":
-      return [{ us: "8", eu: "41" }, { us: "9", eu: "42" }, { us: "10", eu: "43" }];
+      return [{ us: "8", uk: "7" }, { us: "9", uk: "8" }, { us: "10", uk: "9" }];
     case "cat-caps":
     default:
       return [{ one_size: "OS" }];
@@ -163,6 +195,7 @@ function generateMockProducts() {
           product_id: baseId,
           size_key: sizeKey,
           colorway: color,
+          gender,
           stock_qty: Math.floor(Math.random() * 15),
           sold_out: Math.random() < 0.1 ? 1 : 0,
         });
@@ -213,6 +246,7 @@ function generateMockOrders() {
         price: product.price,
         size_key: variant.size_key,
         colorway: variant.colorway,
+        gender: variant.gender || product.gender || "unisex",
         quantity: Math.floor(Math.random() * 2) + 1,
       });
     }
@@ -229,6 +263,9 @@ function generateMockOrders() {
     mockOrders[code] = {
       id: code,
       status: statuses[i % statuses.length],
+      shipping_status: statuses[i % statuses.length] === "confirmed" ? "pending" : null,
+      tracking_number: null,
+      cancelled_at: null,
       items: orderItems,
       total,
       source: "messenger",
@@ -243,7 +280,7 @@ let categories = [
   { id: "cat-shirts", name: "Shirts", slug: "shirts", size_schema: ["alpha"] },
   { id: "cat-shorts", name: "Shorts", slug: "shorts", size_schema: ["waist", "length"] },
   { id: "cat-pants", name: "Pants", slug: "pants", size_schema: ["waist", "length"] },
-  { id: "cat-shoes", name: "Shoes", slug: "shoes", size_schema: ["us", "eu"] },
+  { id: "cat-shoes", name: "Shoes", slug: "shoes", size_schema: ["us", "uk"] },
   { id: "cat-caps", name: "Caps", slug: "caps", size_schema: ["one_size"] },
 ];
 
@@ -447,6 +484,7 @@ const mockApi = {
     await delay();
     const order = orders[id];
     if (!order) throw new Error("Order not found");
+    maybeCancelStaleMockOrder(order);
     return { ...order, items: order.items.map((i) => ({ ...i })) };
   },
 
@@ -456,13 +494,18 @@ const mockApi = {
       throw new Error("Unauthorized");
     }
     return Object.values(orders)
-      .map((o) => ({
-        id: o.id,
-        status: o.status,
-        total: o.total,
-        created_at: o.created_at,
-        item_count: o.items.reduce((sum, i) => sum + (i.quantity || 1), 0),
-      }))
+      .map((o) => {
+        maybeCancelStaleMockOrder(o);
+        return {
+          id: o.id,
+          status: o.status,
+          shipping_status: o.shipping_status,
+          tracking_number: o.tracking_number,
+          total: o.total,
+          created_at: o.created_at,
+          item_count: o.items.reduce((sum, i) => sum + (i.quantity || 1), 0),
+        };
+      })
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   },
 
@@ -506,18 +549,19 @@ const mockApi = {
     }
     const now = new Date().toISOString();
 
-    // Normalize incoming variants and merge duplicates by size_key + colorway.
+    // Normalize incoming variants and merge duplicates by gender + size_key + colorway.
     const incomingVariants = (product.variants || [])
       .map((v) => ({
         ...v,
         size_key: normalizeSizeKey(v.size_key || v.size_row || {}),
         colorway: v.colorway,
+        gender: v.gender || "unisex",
       }))
       .filter((v) => v.size_key && v.colorway);
 
     const mergedMap = new Map();
     for (const v of incomingVariants) {
-      const key = `${v.size_key}::${v.colorway}`;
+      const key = `${v.gender}::${v.size_key}::${v.colorway}`;
       const existing = mergedMap.get(key);
       if (existing) {
         existing.stock_qty = (existing.stock_qty ?? 0) + (v.stock_qty ?? 0);
@@ -540,15 +584,22 @@ const mockApi = {
       existing.details = { ...product.details };
       existing.size_chart = product.size_chart.map((row) => ({ ...row }));
 
-      // Preserve existing variant IDs for matching size_key + colorway.
+      // Preserve existing variant IDs for matching gender + size_key + colorway.
       const existingVariantIds = new Map(
-        existing.variants.map((v) => [`${normalizeSizeKey(v.size_key)}::${v.colorway}`, v.id])
+        existing.variants.map((v) => [
+          `${v.gender || "unisex"}::${normalizeSizeKey(v.size_key)}::${v.colorway}`,
+          v.id,
+        ])
       );
       existing.variants = mergedVariants.map((v) => ({
-        id: existingVariantIds.get(`${v.size_key}::${v.colorway}`) || v.id || generateId(),
+        id:
+          existingVariantIds.get(`${v.gender}::${v.size_key}::${v.colorway}`) ||
+          v.id ||
+          generateId(),
         product_id: existing.id,
         size_key: v.size_key,
         colorway: v.colorway,
+        gender: v.gender,
         stock_qty: v.stock_qty ?? 0,
         sold_out: v.sold_out ? 1 : 0,
       }));
@@ -561,6 +612,7 @@ const mockApi = {
       product_id: id,
       size_key: v.size_key,
       colorway: v.colorway,
+      gender: v.gender,
       stock_qty: v.stock_qty ?? 0,
       sold_out: v.sold_out ? 1 : 0,
     }));
@@ -622,7 +674,22 @@ const mockApi = {
     }
 
     order.status = "confirmed";
-    return { id, status: "confirmed" };
+    order.shipping_status = "pending";
+    order.tracking_number = null;
+    return { id, status: "confirmed", shipping_status: "pending" };
+  },
+
+  updateOrderStatus: async (id, { shipping_status, tracking_number }) => {
+    await delay();
+    if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
+      throw new Error("Unauthorized");
+    }
+    const order = orders[id];
+    if (!order) throw new Error("Order not found");
+    if (order.status !== "confirmed") throw new Error("Order must be confirmed");
+    order.shipping_status = shipping_status;
+    order.tracking_number = tracking_number || null;
+    return { id, shipping_status, tracking_number: order.tracking_number };
   },
 
   uploadImage: async (file) => {
@@ -774,6 +841,14 @@ const realApi = {
   confirmOrder: async (id) => {
     return apiRequest(`/admin/orders/${encodeURIComponent(id)}/confirm`, {
       method: "POST",
+    });
+  },
+
+  updateOrderStatus: async (id, { shipping_status, tracking_number }) => {
+    return apiRequest(`/admin/orders/${encodeURIComponent(id)}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shipping_status, tracking_number }),
     });
   },
 

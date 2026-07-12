@@ -58,7 +58,7 @@ export default function CartPage() {
               <div className="cart-item-meta">
                 <h3>{item.name}</h3>
                 <p>
-                  {displaySize(item.size_key)}
+                  {displaySize(item.size_key, item.gender)}
                   {item.colorway && item.colorway !== "Default" && ` · ${item.colorway}`}
                   {item.gender && ` · ${item.gender}`}
                 </p>

@@ -60,16 +60,46 @@ export function sizeKeyFromRow(row) {
     .join("|");
 }
 
+const WOMEN_NUMERIC_SIZES = {
+  XS: "06",
+  S: "08",
+  M: "10",
+  L: "12",
+  XL: "14",
+};
+
+function sortSizeParts(parts) {
+  // Prefer US before UK for shoes so output reads "us-8 / uk-7".
+  return [...parts].sort((a, b) => {
+    const ak = a.split(":")[0];
+    const bk = b.split(":")[0];
+    if (ak === "us" && bk === "uk") return -1;
+    if (ak === "uk" && bk === "us") return 1;
+    return ak.localeCompare(bk);
+  });
+}
+
 /**
  * Format a size key for display.
- * E.g. "us:8|eu:41" -> "US 8 / EU 41"
+ * E.g. "us:8|uk:7" -> "us-8 / uk-7"
+ * E.g. "alpha:M" with gender "women" -> "M / 10"
+ * E.g. "alpha:M" -> "M"
  */
-export function displaySize(sizeKey) {
-  return sizeKey
-    .split("|")
+export function displaySize(sizeKey, gender = null) {
+  if (!sizeKey) return "";
+  const parts = sizeKey.split("|").filter(Boolean);
+  const isAlpha = parts.length === 1 && parts[0].startsWith("alpha:");
+
+  if (isAlpha) {
+    const value = parts[0].split(":")[1];
+    const numeric = gender === "women" ? WOMEN_NUMERIC_SIZES[value] : null;
+    return numeric ? `${value} / ${numeric}` : value;
+  }
+
+  return sortSizeParts(parts)
     .map((part) => {
       const [k, v] = part.split(":");
-      return `${k.toUpperCase()} ${v}`;
+      return `${k.toLowerCase()}-${v}`;
     })
     .join(" / ");
 }
@@ -122,4 +152,56 @@ export function requireAdmin(request, env) {
     return errorResponse("Unauthorized", 401);
   }
   return null;
+}
+
+const STALE_PENDING_HOURS = 24;
+
+function isStalePending(createdAt) {
+  if (!createdAt) return false;
+  const created = new Date(createdAt).getTime();
+  const now = Date.now();
+  return now - created > STALE_PENDING_HOURS * 60 * 60 * 1000;
+}
+
+/**
+ * Lazily cancel a pending order older than 24 hours and restore variant stock.
+ * Returns the order row with updated status if cancelled, otherwise the original row.
+ */
+export async function maybeCancelStaleOrder(order, env) {
+  if (!order || order.status !== "pending" || !isStalePending(order.created_at)) {
+    return order;
+  }
+
+  const items = JSON.parse(order.items || "[]");
+  const cancelledAt = new Date().toISOString();
+
+  for (const item of items) {
+    let variant;
+    if (item.variant_id) {
+      variant = await env.DB.prepare("SELECT * FROM variants WHERE id = ?")
+        .bind(item.variant_id)
+        .first();
+    }
+    if (!variant && item.product_id && item.size_key && item.colorway) {
+      const gender = item.gender || "unisex";
+      variant = await env.DB.prepare(
+        "SELECT * FROM variants WHERE product_id = ? AND gender = ? AND size_key = ? AND colorway = ?"
+      )
+        .bind(item.product_id, gender, item.size_key, item.colorway)
+        .first();
+    }
+
+    if (variant) {
+      const newStock = variant.stock_qty + (item.quantity || 1);
+      await env.DB.prepare("UPDATE variants SET stock_qty = ?, sold_out = ? WHERE id = ?")
+        .bind(newStock, newStock <= 0 ? 1 : 0, variant.id)
+        .run();
+    }
+  }
+
+  await env.DB.prepare("UPDATE orders SET status = ?, cancelled_at = ? WHERE id = ?")
+    .bind("cancelled", cancelledAt, order.id)
+    .run();
+
+  return { ...order, status: "cancelled", cancelled_at: cancelledAt };
 }

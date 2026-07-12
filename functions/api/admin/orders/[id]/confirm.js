@@ -65,12 +65,12 @@ export async function onRequestPost(context) {
       .run();
   }
 
-  // Mark order confirmed.
-  await env.DB.prepare("UPDATE orders SET status = ? WHERE id = ?")
-    .bind("confirmed", id)
+  // Mark order confirmed and initialize shipping status.
+  await env.DB.prepare("UPDATE orders SET status = ?, shipping_status = ? WHERE id = ?")
+    .bind("confirmed", "pending", id)
     .run();
 
-  return jsonResponse({ id, status: "confirmed" });
+  return jsonResponse({ id, status: "confirmed", shipping_status: "pending" });
 }
 
 export async function onRequestOptions() {

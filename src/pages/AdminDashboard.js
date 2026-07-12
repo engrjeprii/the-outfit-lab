@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import Pagination from "../components/Pagination";
@@ -76,26 +76,11 @@ function sizeKeyFromRow(row) {
     .join("|");
 }
 
-function shoeSizeKey(row) {
-  return sizeKeyFromRow({ us: row.us, eu: row.eu });
-}
-
 function formatShoeSize(sizeKey) {
-  const parts = sizeKey
-    .split("|")
-    .filter((part) => {
-      const [k] = part.split(":");
-      return k === "us" || k === "eu";
-    })
-    .map((part) => {
-      const [k, v] = part.split(":");
-      return `${k.toLowerCase()}-${v}`;
-    })
-    .join(" / ");
-  return parts ? `[${parts}]` : sizeKey;
+  return displaySize(sizeKey);
 }
 
-function formatVariantSize(sizeKey, isShoes) {
+function formatVariantSize(sizeKey, isShoes, gender = null) {
   if (isShoes) return formatShoeSize(sizeKey);
   const filtered = sizeKey
     .split("|")
@@ -104,7 +89,58 @@ function formatVariantSize(sizeKey, isShoes) {
       return k !== "gender" && k !== "stock";
     })
     .join("|");
-  return displaySize(filtered || sizeKey);
+  return displaySize(filtered || sizeKey, gender);
+}
+
+function parseSizeKey(sizeKey) {
+  if (!sizeKey) return {};
+  return Object.fromEntries(sizeKey.split("|").map((part) => part.split(":")));
+}
+
+function emptyVariantRow(category) {
+  const row = { gender: "men", colorway: "", stock_qty: "" };
+  (category?.size_schema || []).forEach((k) => {
+    row[k] = "";
+  });
+  return row;
+}
+
+function variantRowsFromProduct(product, category) {
+  if (!product?.variants || product.variants.length === 0) {
+    return [emptyVariantRow(category)];
+  }
+  return product.variants.map((v) => {
+    const sizeFields = parseSizeKey(v.size_key || "");
+    return {
+      id: v.id,
+      gender: v.gender || product.gender || "unisex",
+      ...sizeFields,
+      colorway: v.colorway === "Default" ? "" : v.colorway || "",
+      stock_qty: v.stock_qty ?? "",
+    };
+  });
+}
+
+function sizeChartFromRows(rows, category) {
+  if (!category) return [];
+  const seen = new Set();
+  const chart = [];
+  for (const row of rows) {
+    const sizeFields = {};
+    for (const k of category.size_schema) {
+      if (row[k]) sizeFields[k] = row[k];
+    }
+    if (Object.keys(sizeFields).length !== category.size_schema.length) continue;
+    const key = sizeKeyFromRow(sizeFields);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const chartRow = { ...sizeFields };
+    if (category.id === "cat-shoes") {
+      chartRow.gender = row.gender || "unisex";
+    }
+    chart.push(chartRow);
+  }
+  return chart;
 }
 
 export default function AdminDashboard() {
@@ -585,14 +621,12 @@ function ProductManager({ categories }) {
                                   sort={getVariantSort(p.id)}
                                   onSort={() => handleVariantSort(p.id, "size")}
                                 />
-                                {!isShoes && (
-                                  <SortHeader
-                                    column="color"
-                                    label="Color"
-                                    sort={getVariantSort(p.id)}
-                                    onSort={() => handleVariantSort(p.id, "color")}
-                                  />
-                                )}
+                                <SortHeader
+                                  column="color"
+                                  label="Color"
+                                  sort={getVariantSort(p.id)}
+                                  onSort={() => handleVariantSort(p.id, "color")}
+                                />
                                 <SortHeader
                                   column="stock"
                                   label="Stock"
@@ -611,8 +645,8 @@ function ProductManager({ categories }) {
                                 .map((v) => (
                                   <tr key={v.id}>
                                     <td>{v.gender || p.gender || "unisex"}</td>
-                                    <td>{formatVariantSize(v.size_key, isShoes)}</td>
-                                    {!isShoes && <td>{v.colorway && v.colorway !== "Default" ? v.colorway : "—"}</td>}
+                                    <td>{formatVariantSize(v.size_key, isShoes, v.gender || p.gender)}</td>
+                                    <td>{v.colorway && v.colorway !== "Default" ? v.colorway : "—"}</td>
                                     <td className={`text-right ${v.stock_qty <= 0 || v.sold_out ? "out" : ""}`}>
                                       {v.sold_out ? "Sold out" : v.stock_qty}
                                     </td>
@@ -657,55 +691,27 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
   const [price, setPrice] = useState(product.price ? product.price / 100 : "");
   const [categoryId, setCategoryId] = useState(product.category_id || "");
   const [brand, setBrand] = useState(product.brand || "");
-  const [gender, setGender] = useState(product.gender || "unisex");
   const [material, setMaterial] = useState(product.details?.material || "");
   const [fit, setFit] = useState(product.details?.fit || "");
   const [care, setCare] = useState(product.details?.care || "");
   const [images, setImages] = useState(product.images || []);
-  const [sizeChart, setSizeChart] = useState(() => {
-    const rows = product.size_chart || [];
-    if (product.category_id === "cat-shoes") {
-      return rows.map((row) => {
-        const sizeKey = shoeSizeKey(row);
-        const existing = (product.variants || []).find((v) => v.size_key === sizeKey);
-        return {
-          ...row,
-          gender: row.gender || "men",
-          stock: existing ? existing.stock_qty : 0,
-        };
-      });
-    }
-    return rows;
-  });
-  const [variants, setVariants] = useState(product.variants || []);
-  const [colorwayInput, setColorwayInput] = useState("");
-  const [initialStock, setInitialStock] = useState(10);
+  const initialCategory = categories.find((c) => c.id === product.category_id);
+  const initialCategoryIdRef = useRef(product.category_id || "");
+  const [variantRows, setVariantRows] = useState(() =>
+    variantRowsFromProduct(product, initialCategory)
+  );
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedImageName, setSelectedImageName] = useState("");
 
   const category = categories.find((c) => c.id === categoryId);
-  const isShoes = category?.id === "cat-shoes";
-  const defaultShoeColorway = "Default";
 
-  // For shoes, keep one variant per size row with a default colorway.
   useEffect(() => {
-    if (!isShoes || !category) return;
-    const next = sizeChart.map((row) => {
-      const sizeKey = shoeSizeKey(row);
-      const gender = row.gender || "men";
-      const stock = parseInt(row.stock, 10);
-      return {
-        size_key: sizeKey,
-        colorway: defaultShoeColorway,
-        gender,
-        stock_qty: Number.isNaN(stock) ? 0 : Math.max(0, stock),
-        sold_out: false,
-      };
-    });
-    setVariants(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isShoes, sizeChart, category]);
+    if (!category) return;
+    if (category.id === initialCategoryIdRef.current) return;
+    setVariantRows([emptyVariantRow(category)]);
+    initialCategoryIdRef.current = category.id;
+  }, [category]);
 
   const generateSku = (catId, brandName) => {
     const cat = categories.find((c) => c.id === catId);
@@ -740,74 +746,19 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
     }
   };
 
-  const addSizeRow = () => {
+  const addVariantRow = () => {
     if (!category) return;
-    const row = {};
-    if (isShoes) {
-      row.gender = "men";
-      row.us = "";
-      row.eu = "";
-      row.stock = 0;
-    } else {
-      category.size_schema.forEach((k) => (row[k] = ""));
-    }
-    setSizeChart([...sizeChart, row]);
+    setVariantRows([...variantRows, emptyVariantRow(category)]);
   };
 
-  const updateSizeRow = (idx, key, value) => {
-    const next = [...sizeChart];
+  const updateVariantRow = (idx, key, value) => {
+    const next = [...variantRows];
     next[idx] = { ...next[idx], [key]: value };
-    setSizeChart(next);
+    setVariantRows(next);
   };
 
-  const updateShoeRowGender = (idx, value) => {
-    if (!isShoes) return;
-    const next = [...sizeChart];
-    next[idx] = { ...next[idx], gender: value };
-    setSizeChart(next);
-  };
-
-  const updateShoeSizePair = (idx, raw) => {
-    if (!isShoes) return;
-    const parts = raw.split("/").map((p) => p.trim());
-    const us = parts[0] || "";
-    const eu = parts[1] || "";
-    const next = [...sizeChart];
-    next[idx] = { ...next[idx], us, eu };
-    setSizeChart(next);
-  };
-
-  const updateShoeRowStock = (idx, value) => {
-    if (!isShoes) return;
-    const next = [...sizeChart];
-    const stock = parseInt(value, 10);
-    next[idx] = { ...next[idx], stock: Number.isNaN(stock) ? 0 : Math.max(0, stock) };
-    setSizeChart(next);
-  };
-
-  const removeSizeRow = (idx) => {
-    const next = sizeChart.filter((_, i) => i !== idx);
-    setSizeChart(next);
-  };
-
-  const addColorway = () => {
-    const color = isShoes ? defaultShoeColorway : colorwayInput.trim();
-    if (!color) return;
-    const next = [...variants];
-    sizeChart.forEach((row) => {
-      const sizeKey = sizeKeyFromRow(row);
-      if (!next.some((v) => v.size_key === sizeKey && v.colorway === color)) {
-        next.push({ size_key: sizeKey, colorway: color, stock_qty: Math.max(0, parseInt(initialStock, 10) || 0), sold_out: false });
-      }
-    });
-    setVariants(next);
-    setColorwayInput("");
-  };
-
-  const updateVariant = (index, updates) => {
-    const next = [...variants];
-    next[index] = { ...next[index], ...updates };
-    setVariants(next);
+  const removeVariantRow = (idx) => {
+    setVariantRows(variantRows.filter((_, i) => i !== idx));
   };
 
   const handleUpload = async (e) => {
@@ -843,13 +794,13 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       return;
     }
 
-    if (!brand.trim()) {
-      setError("Brand is required.");
+    if (!category) {
+      setError("Invalid category.");
       return;
     }
 
-    if (!isShoes && !gender) {
-      setError("Gender is required.");
+    if (!brand.trim()) {
+      setError("Brand is required.");
       return;
     }
 
@@ -873,28 +824,33 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       return;
     }
 
-    if (sizeChart.length === 0) {
-      setError("Add at least one size row.");
-      return;
+    const validRows = [];
+    for (let i = 0; i < variantRows.length; i++) {
+      const row = variantRows[i];
+      if (!row.gender) {
+        setError(`Gender is required for variant ${i + 1}.`);
+        return;
+      }
+      for (const k of category.size_schema) {
+        if (!row[k]) {
+          setError(`${k} is required for variant ${i + 1}.`);
+          return;
+        }
+      }
+      if (!row.colorway || !row.colorway.trim()) {
+        setError(`Colorway is required for variant ${i + 1}.`);
+        return;
+      }
+      const stock = parseInt(row.stock_qty, 10);
+      if (Number.isNaN(stock) || stock <= 0) {
+        setError(`Stock must be greater than 0 for variant ${i + 1}.`);
+        return;
+      }
+      validRows.push(row);
     }
 
-    if (isShoes && sizeChart.some((row) => !row.us || !row.eu)) {
-      setError("Shoe sizes require both US and EU values.");
-      return;
-    }
-
-    if (isShoes && sizeChart.some((row) => !row.stock || parseInt(row.stock, 10) <= 0)) {
-      setError("Stock must be greater than 0 for every shoe size.");
-      return;
-    }
-
-    if (!isShoes && sizeChart.some((row) => category.size_schema.some((k) => !row[k]))) {
-      setError("All size values are required.");
-      return;
-    }
-
-    if (!isShoes && variants.length === 0) {
-      setError("Add at least one colorway.");
+    if (validRows.length === 0) {
+      setError("Add at least one variant row.");
       return;
     }
 
@@ -903,18 +859,26 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       return;
     }
 
-    if (variants.length === 0) {
-      setError("Add at least one colorway with sizes before saving.");
-      return;
-    }
+    const sizeChart = sizeChartFromRows(validRows, category);
+
+    const genders = [...new Set(validRows.map((r) => r.gender))];
+    const productGender = genders.length === 1 ? genders[0] : "unisex";
+
+    const variants = validRows.map((row) => {
+      const sizeFields = {};
+      for (const k of category.size_schema) {
+        sizeFields[k] = row[k];
+      }
+      return {
+        size_key: sizeKeyFromRow(sizeFields),
+        colorway: row.colorway.trim(),
+        gender: row.gender,
+        stock_qty: parseInt(row.stock_qty, 10) || 0,
+        sold_out: false,
+      };
+    });
 
     setSaving(true);
-
-    const productGender = isShoes
-      ? (sizeChart.every((r) => r.gender === sizeChart[0]?.gender)
-          ? sizeChart[0]?.gender
-          : "unisex") || "unisex"
-      : gender;
 
     const payload = {
       sku,
@@ -927,13 +891,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       images,
       details: { material, fit, care },
       size_chart: sizeChart,
-      variants: variants.map((v) => ({
-        size_key: v.size_key,
-        colorway: v.colorway,
-        gender: v.gender || "unisex",
-        stock_qty: parseInt(v.stock_qty) || 0,
-        sold_out: !!v.sold_out,
-      })),
+      variants,
     };
 
     try {
@@ -970,21 +928,6 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         required
       />
 
-      {!isShoes && (
-        <SortSelect
-          value={gender}
-          label="Gender *"
-          placeholder="Select gender"
-          options={[
-            { value: "men", label: "Men" },
-            { value: "women", label: "Women" },
-            { value: "unisex", label: "Unisex" },
-          ]}
-          onChange={(value) => setGender(value)}
-          required
-        />
-      )}
-
       <label>Name *</label>
       <input value={name} onChange={(e) => setName(e.target.value)} required />
 
@@ -1008,130 +951,57 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       <label>Care *</label>
       <input value={care} onChange={(e) => setCare(e.target.value)} required />
 
-      <h4>Size Chart *</h4>
-      {category && sizeChart.map((row, idx) => (
-        <div key={idx} className="size-row">
-          {isShoes ? (
-            <>
-              <SortSelect
-                label=""
-                options={[
-                  { value: "men", label: "Men" },
-                  { value: "women", label: "Women" },
-                  { value: "unisex", label: "Unisex" },
-                ]}
-                value={row.gender || "men"}
-                onChange={(value) => updateShoeRowGender(idx, value)}
-              />
-              <input
-                placeholder="US / EU *"
-                value={row.us || row.eu ? `${row.us || ""} / ${row.eu || ""}` : ""}
-                onChange={(e) => updateShoeSizePair(idx, e.target.value)}
-                className="shoe-size-pair-input"
-                required
-              />
-              <input
-                type="number"
-                min={1}
-                placeholder="Stock *"
-                value={row.stock}
-                onChange={(e) => updateShoeRowStock(idx, e.target.value)}
-                className="shoe-stock-input"
-                required
-              />
-            </>
-          ) : (
-            category.size_schema.map((k) => (
-              <input
-                key={k}
-                placeholder={`${k.toUpperCase()} *`}
-                value={row[k] || ""}
-                onChange={(e) => updateSizeRow(idx, k, e.target.value)}
-                required
-              />
-            ))
-          )}
-          <button type="button" className="btn btn-danger" onClick={() => removeSizeRow(idx)}>
-            Remove
-          </button>
-        </div>
-      ))}
-      <button type="button" className="btn btn-secondary" onClick={addSizeRow}>
-        Add Size Row
-      </button>
-
-      {!isShoes && <h4>Colorways & Stock *</h4>}
-      {!isShoes && (
-        <div className="colorway-input">
+      <h4>Variants *</h4>
+      {category && variantRows.map((row, idx) => (
+        <div key={idx} className="variant-row unified-variant-row">
+          <SortSelect
+            label=""
+            options={[
+              { value: "men", label: "Men" },
+              { value: "women", label: "Women" },
+              { value: "unisex", label: "Unisex" },
+            ]}
+            value={row.gender || "men"}
+            onChange={(value) => updateVariantRow(idx, "gender", value)}
+            required
+          />
+          {category.size_schema.map((k) => (
+            <input
+              key={k}
+              placeholder={`${k.toUpperCase()} *`}
+              value={row[k] || ""}
+              onChange={(e) => updateVariantRow(idx, k, e.target.value)}
+              required
+            />
+          ))}
           <input
-            placeholder="New colorway, e.g. Black *"
-            value={colorwayInput}
-            onChange={(e) => setColorwayInput(e.target.value)}
+            placeholder="Color *"
+            value={row.colorway || ""}
+            onChange={(e) => updateVariantRow(idx, "colorway", e.target.value)}
             required
           />
           <input
             type="number"
-            min={0}
-            placeholder="Initial stock *"
-            value={initialStock}
-            onChange={(e) => setInitialStock(Math.max(0, parseInt(e.target.value, 10) || 0))}
-            title="Initial stock per size for this colorway"
+            min={1}
+            placeholder="Stock *"
+            value={row.stock_qty}
+            onChange={(e) => updateVariantRow(idx, "stock_qty", e.target.value)}
             required
           />
-          <button type="button" className="btn btn-secondary" onClick={addColorway}>
-            Add Colorway
+          <button type="button" className="btn btn-danger" onClick={() => removeVariantRow(idx)}>
+            Remove
           </button>
         </div>
-      )}
-
-      {!isShoes && variants.length > 0 && (
-        <div className="colorway-stock-summary">
-          {Object.entries(
-            variants.reduce((acc, v) => {
-              acc[v.colorway] = (acc[v.colorway] || 0) + (parseInt(v.stock_qty, 10) || 0);
-              return acc;
-            }, {})
-          )
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([color, total]) => (
-              <div key={color} className="colorway-stock-row">
-                <span className="colorway-name">{color}</span>
-                <span className="colorway-total">{total} in stock</span>
-              </div>
-            ))}
-        </div>
-      )}
-
-      {!isShoes && (
-        <div className="variant-matrix">
-          {variants.map((v, idx) => (
-            <div key={`${v.size_key}-${v.colorway}-${v.gender || "unisex"}`} className="variant-row">
-              <span>
-                {displaySize(v.size_key)}
-                {` / ${v.colorway}`}
-              </span>
-              <input
-                type="number"
-                min={0}
-                placeholder="Stock *"
-                value={v.stock_qty}
-                onChange={(e) =>
-                  updateVariant(idx, { stock_qty: parseInt(e.target.value) || 0 })
-                }
-                required
-              />
-              <label>
-                <input
-                  type="checkbox"
-                  checked={v.sold_out}
-                  onChange={(e) => updateVariant(idx, { sold_out: e.target.checked })}
-                />
-                Sold out
-              </label>
-            </div>
-          ))}
-        </div>
-      )}
+      ))}
+      {!category && <p>Select a category to add variants.</p>}
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={addVariantRow}
+        disabled={!category}
+      >
+        Add Variant Row
+      </button>
 
       <h4>Images *</h4>
       <div className="file-input-wrap">
@@ -1191,6 +1061,7 @@ function OrderManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [sort, setSort] = useState({ column: "created_at", direction: "desc" });
@@ -1253,6 +1124,25 @@ function OrderManager() {
     setOrder(null);
   };
 
+  const handleUpdateStatus = async () => {
+    if (!order) return;
+    setUpdatingStatus(true);
+    setError("");
+    try {
+      await api.updateOrderStatus(order.id, {
+        shipping_status: order.shipping_status,
+        tracking_number: order.tracking_number,
+      });
+      const updated = await api.getOrder(order.id);
+      setOrder(updated);
+      loadOrders();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   const handleSort = (column) => {
     setSort((prev) => ({
       column,
@@ -1285,6 +1175,9 @@ function OrderManager() {
           break;
         case "status":
           comparison = a.status.localeCompare(b.status);
+          break;
+        case "shipping_status":
+          comparison = (a.shipping_status || "").localeCompare(b.shipping_status || "");
           break;
         default:
           return 0;
@@ -1325,13 +1218,14 @@ function OrderManager() {
                   <SortHeader column="item_count" label="Items" sort={sort} onSort={handleSort} />
                   <SortHeader column="total" label="Total" sort={sort} onSort={handleSort} />
                   <SortHeader column="status" label="Status" sort={sort} onSort={handleSort} />
+                  <SortHeader column="shipping_status" label="Shipping" sort={sort} onSort={handleSort} />
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedOrders.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="empty-cell">No orders yet.</td>
+                    <td colSpan={7} className="empty-cell">No orders yet.</td>
                   </tr>
                 )}
                 {paginatedOrders.map((o) => (
@@ -1342,6 +1236,11 @@ function OrderManager() {
                     <td data-label="Total">{formatPrice(o.total)}</td>
                     <td data-label="Status">
                       <span className={`status-badge status-${o.status}`}>{o.status}</span>
+                    </td>
+                    <td data-label="Shipping">
+                      <span className={`status-badge status-${o.shipping_status || "pending"}`}>
+                        {o.shipping_status || "—"}
+                      </span>
                     </td>
                     <td data-label="Action">
                       <button className="btn btn-secondary" onClick={() => handleView(o.id)}>
@@ -1370,6 +1269,11 @@ function OrderManager() {
             <p className="order-detail-meta">
               <span>{formatDate(order.created_at)}</span>
               <span className={`status-badge status-${order.status}`}>{order.status}</span>
+              {order.status !== "pending" && (
+                <span className={`status-badge status-${order.shipping_status || "pending"}`}>
+                  {order.shipping_status || "pending"}
+                </span>
+              )}
             </p>
             <ul className="order-detail-items">
               {order.items.map((item, idx) => (
@@ -1379,7 +1283,7 @@ function OrderManager() {
                     <span className="order-item-price">{formatPrice(item.price * item.quantity)}</span>
                   </div>
                   <div className="order-item-meta">
-                    {displaySize(item.size_key)} / {item.colorway} × {item.quantity}
+                    {displaySize(item.size_key, item.gender)} / {item.colorway} × {item.quantity}
                   </div>
                   {item.quantity > 1 && (
                     <div className="order-item-unit">{formatPrice(item.price)} each</div>
@@ -1402,7 +1306,44 @@ function OrderManager() {
                 </button>
               </div>
             )}
-            {order.status !== "pending" && (
+            {order.status === "confirmed" && (
+              <>
+                <div className="order-shipping-edit">
+                  <SortSelect
+                    label="Shipping status"
+                    options={[
+                      { value: "pending", label: "Pending" },
+                      { value: "packed", label: "Packed" },
+                      { value: "shipped", label: "Shipped" },
+                      { value: "delivered", label: "Delivered" },
+                      { value: "pickup", label: "Pickup" },
+                    ]}
+                    value={order.shipping_status || "pending"}
+                    onChange={(value) => setOrder({ ...order, shipping_status: value })}
+                  />
+                  <label>Tracking number</label>
+                  <input
+                    type="text"
+                    value={order.tracking_number || ""}
+                    onChange={(e) => setOrder({ ...order, tracking_number: e.target.value })}
+                    placeholder="Leave empty if pickup"
+                  />
+                </div>
+                <div className="form-actions">
+                  <button className="btn btn-secondary" onClick={handleCloseOrder}>
+                    Close
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleUpdateStatus}
+                    disabled={updatingStatus}
+                  >
+                    Update Status
+                  </button>
+                </div>
+              </>
+            )}
+            {order.status !== "pending" && order.status !== "confirmed" && (
               <div className="form-actions">
                 <button className="btn btn-secondary" onClick={handleCloseOrder}>
                   Close

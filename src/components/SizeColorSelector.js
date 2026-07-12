@@ -1,11 +1,39 @@
 import React from "react";
 
-export function displaySize(sizeKey) {
-  return sizeKey
-    .split("|")
+const WOMEN_NUMERIC_SIZES = {
+  XS: "06",
+  S: "08",
+  M: "10",
+  L: "12",
+  XL: "14",
+};
+
+function sortSizeParts(parts) {
+  // Prefer US before UK for shoes so output reads "us-8 / uk-7".
+  return [...parts].sort((a, b) => {
+    const ak = a.split(":")[0];
+    const bk = b.split(":")[0];
+    if (ak === "us" && bk === "uk") return -1;
+    if (ak === "uk" && bk === "us") return 1;
+    return ak.localeCompare(bk);
+  });
+}
+
+export function displaySize(sizeKey, gender = null) {
+  if (!sizeKey) return "";
+  const parts = sizeKey.split("|").filter(Boolean);
+  const isAlpha = parts.length === 1 && parts[0].startsWith("alpha:");
+
+  if (isAlpha) {
+    const value = parts[0].split(":")[1];
+    const numeric = gender === "women" ? WOMEN_NUMERIC_SIZES[value] : null;
+    return numeric ? `${value} / ${numeric}` : value;
+  }
+
+  return sortSizeParts(parts)
     .map((part) => {
       const [k, v] = part.split(":");
-      return `${k.toUpperCase()} ${v}`;
+      return `${k.toLowerCase()}-${v}`;
     })
     .join(" / ");
 }
