@@ -50,6 +50,21 @@ function DeleteIcon() {
   );
 }
 
+function ChevronIcon({ down }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ transform: down ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
+    >
+      <path d="M3 6L8 11L13 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function getToken() {
   return localStorage.getItem("admin-token") || "";
 }
@@ -209,6 +224,7 @@ function ProductManager({ categories }) {
   const [editing, setEditing] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [expanded, setExpanded] = useState(new Set());
 
   const loadProducts = useCallback(
     async (overrides = {}) => {
@@ -246,6 +262,18 @@ function ProductManager({ categories }) {
 
   const refreshProducts = () => {
     loadProducts();
+  };
+
+  const toggleExpanded = (id) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   const handleEdit = async (p) => {
@@ -406,98 +434,91 @@ function ProductManager({ categories }) {
         <div className="page-status">Loading...</div>
       ) : (
         <>
-          <div className="admin-table-wrap">
-            <table className="admin-table admin-product-table">
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.length === 0 && (
-                  <tr>
-                    <td colSpan={2} className="empty-cell">No products found.</td>
-                  </tr>
-                )}
-                {products.map((p) => {
-                  const category = categories.find((c) => c.id === p.category_id);
-                  return (
-                    <React.Fragment key={p.id}>
-                      <tr className="admin-product-main-row">
-                        <td colSpan={2}>
-                          <div className="admin-product-header">
-                            <div className="admin-product-info">
-                              <img
-                                src={p.images[0]}
-                                alt={p.name}
-                                className="admin-product-thumb"
-                              />
-                              <div className="admin-product-text">
-                                <span className="admin-product-name">{p.name}</span>
-                                <span className="admin-product-meta">
-                                  {p.sku} · {category?.name || p.category_id} · {formatPrice(p.price)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="admin-product-actions">
-                              <button
-                                className="icon-btn"
-                                onClick={() => handleEdit(p)}
-                                aria-label="Edit"
-                                title="Edit"
-                              >
-                                <EditIcon />
-                              </button>
-                              <button
-                                className="icon-btn"
-                                onClick={() => setDeleteConfirm(p)}
-                                aria-label="Delete"
-                                title="Delete"
-                              >
-                                <DeleteIcon />
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+          <div className="admin-product-collapsible-list">
+            {products.length === 0 && (
+              <p className="empty-cell">No products found.</p>
+            )}
+            {products.map((p) => {
+              const category = categories.find((c) => c.id === p.category_id);
+              const isExpanded = expanded.has(p.id);
+              const isShoes = category?.id === "cat-shoes";
+              return (
+                <div key={p.id} className={`admin-product-collapsible ${isExpanded ? "expanded" : ""}`}>
+                  <button
+                    type="button"
+                    className="admin-product-collapsible-header"
+                    onClick={() => toggleExpanded(p.id)}
+                    aria-expanded={isExpanded}
+                  >
+                    <div className="admin-product-collapsible-title">
+                      <img
+                        src={p.images[0]}
+                        alt={p.name}
+                        className="admin-product-thumb"
+                      />
+                      <div className="admin-product-text">
+                        <span className="admin-product-name">{p.name}</span>
+                        <span className="admin-product-meta">
+                          {p.sku} · {category?.name || p.category_id} · {formatPrice(p.price)} ·{" "}
+                          {p.total_stock || 0} in stock
+                        </span>
+                      </div>
+                    </div>
+                    <div className="admin-product-actions" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="icon-btn"
+                        onClick={() => handleEdit(p)}
+                        aria-label="Edit"
+                        title="Edit"
+                      >
+                        <EditIcon />
+                      </button>
+                      <button
+                        className="icon-btn"
+                        onClick={() => setDeleteConfirm(p)}
+                        aria-label="Delete"
+                        title="Delete"
+                      >
+                        <DeleteIcon />
+                      </button>
+                      <span className="admin-product-chevron">
+                        <ChevronIcon down={isExpanded} />
+                      </span>
+                    </div>
+                  </button>
+                  {isExpanded && (
+                    <div className="admin-product-collapsible-body">
                       {p.variants && p.variants.length > 0 ? (
-                        p.variants.map((v) => (
-                          <tr key={v.id} className="admin-product-variant-row">
-                            <td colSpan={2}>
-                              <div className="admin-variant-line">
-                                <span className="variant-badge variant-gender">
-                                  {v.gender || p.gender || "unisex"}
-                                </span>
-                                <span className="variant-badge variant-size">
-                                  {displaySize(v.size_key)}
-                                </span>
-                                {v.colorway && v.colorway !== "Default" && (
-                                  <span className="variant-badge variant-color">
-                                    {v.colorway}
-                                  </span>
-                                )}
-                                <span className={`variant-badge variant-stock ${v.stock_qty <= 0 || v.sold_out ? "out" : ""}`}>
-                                  {v.sold_out ? "Sold out" : `${v.stock_qty} in stock`}
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                        <table className="admin-variant-table">
+                          <thead>
+                            <tr>
+                              <th>Gender</th>
+                              <th>Size</th>
+                              {!isShoes && <th>Color</th>}
+                              <th className="text-right">Stock</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {p.variants.map((v) => (
+                              <tr key={v.id}>
+                                <td>{v.gender || p.gender || "unisex"}</td>
+                                <td>{displaySize(v.size_key)}</td>
+                                {!isShoes && <td>{v.colorway && v.colorway !== "Default" ? v.colorway : "—"}</td>}
+                                <td className={`text-right ${v.stock_qty <= 0 || v.sold_out ? "out" : ""}`}>
+                                  {v.sold_out ? "Sold out" : v.stock_qty}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       ) : (
-                        <tr className="admin-product-variant-row">
-                          <td colSpan={2}>
-                            <div className="admin-variant-line">
-                              <span className="variant-badge variant-stock out">No variants</span>
-                            </div>
-                          </td>
-                        </tr>
+                        <p className="admin-variant-empty">No variants.</p>
                       )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <Pagination
             page={result.page}
