@@ -1107,52 +1107,6 @@ input, select, textarea {
   }
 }
 
-.admin-product-list-header {
-  display: none;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--border);
-  font-size: 0.6875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.admin-product-list-header .sortable-header {
-  cursor: pointer;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-transform: inherit;
-  letter-spacing: inherit;
-}
-
-.admin-product-list-header .sortable-header:hover {
-  color: var(--text);
-}
-
-.admin-product-list-header .sort-indicator {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-}
-
-.admin-product-list-header .sortable-header.active .sort-indicator {
-  color: var(--text);
-}
-
-.admin-product-list-header-actions {
-  text-align: right;
-  flex-shrink: 0;
-}
-
 .admin-product-collapsible-list {
   display: flex;
   flex-direction: column;
@@ -1168,9 +1122,9 @@ input, select, textarea {
 }
 
 .admin-product-collapsible-header {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-md);
   width: 100%;
   padding: var(--space-sm) var(--space-md);
@@ -1190,13 +1144,6 @@ input, select, textarea {
   align-items: center;
   gap: var(--space-md);
   min-width: 0;
-}
-
-.admin-product-collapsible-col {
-  display: none;
-  font-size: 0.875rem;
-  color: var(--text);
-  text-align: left;
 }
 
 .admin-product-thumb {
@@ -1326,28 +1273,28 @@ input, select, textarea {
 }
 
 @media (min-width: 768px) {
-  .admin-product-list-header {
-    display: grid;
-    grid-template-columns: 1fr 120px 120px auto;
-    gap: var(--space-md);
-  }
-
-  .admin-product-collapsible-header {
-    grid-template-columns: 1fr 120px 120px auto;
-    align-items: center;
-  }
-
-  .admin-product-collapsible-title {
-    min-width: 0;
-  }
-
-  .admin-product-collapsible-col {
-    display: block;
-  }
-
   .admin-product-meta {
     white-space: nowrap;
   }
+}
+
+.admin-variant-table .sortable-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-variant-table .sortable-header:hover {
+  color: var(--text);
+}
+
+.admin-variant-table .sort-indicator {
+  margin-left: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.admin-variant-table .sortable-header.active .sort-indicator {
+  color: var(--text);
 }
 
 @media (max-width: 767px) {

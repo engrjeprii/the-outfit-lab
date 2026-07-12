@@ -252,8 +252,6 @@ function ProductManager({ categories }) {
   const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [expanded, setExpanded] = useState(new Set());
-  const [variantPages, setVariantPages] = useState({});
-  const VARIANT_PAGE_LIMIT = 5;
 
   const loadProducts = useCallback(
     async (overrides = {}) => {
@@ -293,30 +291,50 @@ function ProductManager({ categories }) {
     loadProducts();
   };
 
-  const productSort = useMemo(() => {
-    const map = {
-      newest: { column: "created_at", direction: "desc" },
-      oldest: { column: "created_at", direction: "asc" },
-      name_asc: { column: "name", direction: "asc" },
-      name_desc: { column: "name", direction: "desc" },
-      price_asc: { column: "price", direction: "asc" },
-      price_desc: { column: "price", direction: "desc" },
-      stock_asc: { column: "stock", direction: "asc" },
-      stock_desc: { column: "stock", direction: "desc" },
-    };
-    return map[filters.sort] || { column: "created_at", direction: "desc" };
-  }, [filters.sort]);
+  const [variantSort, setVariantSort] = useState({});
+  const VARIANT_PAGE_LIMIT = 5;
 
-  const handleSort = (column) => {
-    const map = {
-      created_at: { asc: "oldest", desc: "newest" },
-      name: { asc: "name_asc", desc: "name_desc" },
-      price: { asc: "price_asc", desc: "price_desc" },
-      stock: { asc: "stock_asc", desc: "stock_desc" },
-    };
-    const nextDir = productSort.column === column && productSort.direction === "asc" ? "desc" : "asc";
-    handleFilterChange("sort", map[column][nextDir]);
+  const getVariantSort = (productId) => {
+    return variantSort[productId] || { column: "size_key", direction: "asc" };
   };
+
+  const handleVariantSort = (productId, column) => {
+    setVariantSort((prev) => {
+      const current = prev[productId] || { column: "size_key", direction: "asc" };
+      const direction = current.column === column && current.direction === "asc" ? "desc" : "asc";
+      return { ...prev, [productId]: { column, direction } };
+    });
+  };
+
+  const sortVariants = (variants, productId, isShoes) => {
+    const { column, direction } = getVariantSort(productId);
+    const sorted = [...variants];
+    sorted.sort((a, b) => {
+      let comparison = 0;
+      switch (column) {
+        case "gender":
+          comparison = (a.gender || "").localeCompare(b.gender || "");
+          break;
+        case "size":
+          comparison = (a.size_key || "").localeCompare(b.size_key || "");
+          break;
+        case "color":
+          comparison = (a.colorway || "").localeCompare(b.colorway || "");
+          break;
+        case "stock":
+          comparison = (a.stock_qty || 0) - (b.stock_qty || 0);
+          break;
+        case "size_key":
+        default:
+          comparison = (a.size_key || "").localeCompare(b.size_key || "");
+          break;
+      }
+      return direction === "asc" ? comparison : -comparison;
+    });
+    return sorted;
+  };
+
+  const [variantPages, setVariantPages] = useState({});
 
   const handleVariantPageChange = (productId, page) => {
     setVariantPages((prev) => ({ ...prev, [productId]: page }));
@@ -496,12 +514,6 @@ function ProductManager({ categories }) {
         <div className="page-status">Loading...</div>
       ) : (
         <>
-          <div className="admin-product-list-header">
-            <SortHeader column="name" label="Product" sort={productSort} onSort={handleSort} />
-            <SortHeader column="price" label="Price" sort={productSort} onSort={handleSort} />
-            <SortHeader column="stock" label="Stock" sort={productSort} onSort={handleSort} />
-            <span className="admin-product-list-header-actions">Actions</span>
-          </div>
           <div className="admin-product-collapsible-list">
             {products.length === 0 && (
               <p className="empty-cell">No products found.</p>
@@ -527,15 +539,10 @@ function ProductManager({ categories }) {
                       <div className="admin-product-text">
                         <span className="admin-product-name">{p.name}</span>
                         <span className="admin-product-meta">
-                          {p.sku} · {category?.name || p.category_id}
+                          {p.sku} · {category?.name || p.category_id} · {formatPrice(p.price)} ·{" "}
+                          {p.total_stock || 0} in stock
                         </span>
                       </div>
-                    </div>
-                    <div className="admin-product-collapsible-col admin-product-collapsible-price">
-                      {formatPrice(p.price)}
-                    </div>
-                    <div className="admin-product-collapsible-col admin-product-collapsible-stock">
-                      {p.total_stock || 0}
                     </div>
                     <div className="admin-product-actions" onClick={(e) => e.stopPropagation()}>
                       <button
@@ -566,14 +573,37 @@ function ProductManager({ categories }) {
                           <table className="admin-variant-table">
                             <thead>
                               <tr>
-                                <th>Gender</th>
-                                <th>Size</th>
-                                {!isShoes && <th>Color</th>}
-                                <th className="text-right">Stock</th>
+                                <SortHeader
+                                  column="gender"
+                                  label="Gender"
+                                  sort={getVariantSort(p.id)}
+                                  onSort={() => handleVariantSort(p.id, "gender")}
+                                />
+                                <SortHeader
+                                  column="size"
+                                  label="Size"
+                                  sort={getVariantSort(p.id)}
+                                  onSort={() => handleVariantSort(p.id, "size")}
+                                />
+                                {!isShoes && (
+                                  <SortHeader
+                                    column="color"
+                                    label="Color"
+                                    sort={getVariantSort(p.id)}
+                                    onSort={() => handleVariantSort(p.id, "color")}
+                                  />
+                                )}
+                                <SortHeader
+                                  column="stock"
+                                  label="Stock"
+                                  sort={getVariantSort(p.id)}
+                                  onSort={() => handleVariantSort(p.id, "stock")}
+                                  align="right"
+                                />
                               </tr>
                             </thead>
                             <tbody>
-                              {p.variants
+                              {sortVariants(p.variants, p.id, isShoes)
                                 .slice(
                                   ((variantPages[p.id] || 1) - 1) * VARIANT_PAGE_LIMIT,
                                   (variantPages[p.id] || 1) * VARIANT_PAGE_LIMIT
@@ -1386,11 +1416,11 @@ function OrderManager() {
   );
 }
 
-function SortHeader({ column, label, sort, onSort }) {
+function SortHeader({ column, label, sort, onSort, align = "left" }) {
   const active = sort.column === column;
   return (
     <th
-      className={`sortable-header ${active ? "active" : ""}`}
+      className={`sortable-header ${active ? "active" : ""} ${align === "right" ? "text-right" : ""}`}
       onClick={() => onSort(column)}
     >
       <span>{label}</span>
