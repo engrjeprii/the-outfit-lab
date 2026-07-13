@@ -354,15 +354,25 @@ const mockApi = {
 
     let list = products
       .filter((p) => !p.deleted_at)
-      .map((p) => ({
-        ...p,
-        images: [...p.images],
-        details: { ...p.details },
-        size_chart: p.size_chart.map((row) => ({ ...row })),
-        variants: isAdmin ? p.variants.map((v) => ({ ...v })) : undefined,
-        total_stock: p.variants.reduce((sum, v) => sum + (v.stock_qty || 0), 0),
-        variant_count: p.variants.length,
-      }));
+      .map((p) => {
+        const inStockGenders = [
+          ...new Set(
+            p.variants
+              .filter((v) => !v.sold_out && v.stock_qty > 0)
+              .map((v) => v.gender || "unisex")
+          ),
+        ];
+        return {
+          ...p,
+          images: [...p.images],
+          details: { ...p.details },
+          size_chart: p.size_chart.map((row) => ({ ...row })),
+          variants: isAdmin ? p.variants.map((v) => ({ ...v })) : undefined,
+          total_stock: p.variants.reduce((sum, v) => sum + (v.stock_qty || 0), 0),
+          variant_count: p.variants.length,
+          available_genders: inStockGenders.length > 0 ? inStockGenders : [p.gender || "unisex"],
+        };
+      });
 
     if (category) {
       list = list.filter((p) => p.category_id === category);
@@ -373,7 +383,7 @@ const mockApi = {
     }
 
     if (gender) {
-      list = list.filter((p) => p.gender === gender);
+      list = list.filter((p) => p.available_genders.includes(gender));
     }
 
     if (minPrice !== undefined && minPrice !== "") {

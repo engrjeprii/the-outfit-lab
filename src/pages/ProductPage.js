@@ -12,6 +12,18 @@ function shoeSizeKey(row) {
     .join("|");
 }
 
+function availableGenderLabel(product) {
+  const genders = [
+    ...new Set(
+      product.variants
+        .filter((v) => !v.sold_out && v.stock_qty > 0)
+        .map((v) => v.gender || "unisex")
+    ),
+  ];
+  if (genders.length === 0) return product.gender || "unisex";
+  return genders.map((g) => g.charAt(0).toUpperCase() + g.slice(1)).join(" / ");
+}
+
 function BackIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -201,7 +213,7 @@ export default function ProductPage() {
         </div>
 
         <div className="product-details">
-          <p className="product-brand">{product.brand} <span className="product-gender">{product.gender}</span></p>
+          <p className="product-brand">{product.brand} <span className="product-gender">{availableGenderLabel(product)}</span></p>
           <h1>{product.name}</h1>
           <p className="product-price-large">{formatPrice(product.price)}</p>
           <p className="product-description">{product.description}</p>

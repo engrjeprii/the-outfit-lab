@@ -54,7 +54,9 @@ export async function onRequestGet(context) {
   }
 
   if (gender) {
-    whereClauses.push("gender = ?");
+    whereClauses.push(
+      "EXISTS (SELECT 1 FROM variants WHERE variants.product_id = products.id AND variants.gender = ? AND variants.stock_qty > 0)"
+    );
     bindings.push(gender);
   }
 
@@ -127,6 +129,7 @@ export async function onRequestGet(context) {
 
   const productIds = results.map((p) => p.id);
   const stockMap = new Map();
+  const availableGenderMap = new Map();
   let variantMap = new Map();
   const isAdmin = verifyAdminToken(request, env);
 
@@ -142,6 +145,18 @@ export async function onRequestGet(context) {
         total_stock: row.total_stock,
         variant_count: row.variant_count,
       });
+    }
+
+    const { results: genderResults } = await env.DB.prepare(
+      `SELECT product_id, gender FROM variants WHERE product_id IN (${placeholders}) AND stock_qty > 0 GROUP BY product_id, gender`
+    )
+      .bind(...productIds)
+      .all();
+    for (const row of genderResults) {
+      if (!availableGenderMap.has(row.product_id)) {
+        availableGenderMap.set(row.product_id, new Set());
+      }
+      availableGenderMap.get(row.product_id).add(row.gender || "unisex");
     }
 
     if (isAdmin) {
@@ -166,6 +181,7 @@ export async function onRequestGet(context) {
     size_chart: JSON.parse(p.size_chart),
     total_stock: stockMap.get(p.id)?.total_stock ?? 0,
     variant_count: stockMap.get(p.id)?.variant_count ?? 0,
+    available_genders: Array.from(availableGenderMap.get(p.id) || [p.gender || "unisex"]),
     variants: isAdmin ? (variantMap.get(p.id) || []) : undefined,
   }));
 
