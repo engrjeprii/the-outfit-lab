@@ -111,6 +111,11 @@ function variantRowsFromProduct(product, category) {
   }
   return product.variants.map((v) => {
     const sizeFields = parseSizeKey(v.size_key || "");
+    // Legacy shoe data may use 'eu' instead of 'uk'.
+    if (category?.id === "cat-shoes" && "eu" in sizeFields) {
+      sizeFields.uk = sizeFields.eu;
+      delete sizeFields.eu;
+    }
     return {
       id: v.id,
       gender: v.gender || product.gender || "unisex",
@@ -128,7 +133,9 @@ function sizeChartFromRows(rows, category) {
   for (const row of rows) {
     const sizeFields = {};
     for (const k of category.size_schema) {
-      if (row[k]) sizeFields[k] = row[k];
+      // Legacy shoe data may use 'eu' instead of 'uk'.
+      const sourceKey = category.id === "cat-shoes" && k === "uk" && row.eu ? "eu" : k;
+      if (row[sourceKey]) sizeFields[k] = row[sourceKey];
     }
     if (Object.keys(sizeFields).length !== category.size_schema.length) continue;
     const key = sizeKeyFromRow(sizeFields);

@@ -57,7 +57,12 @@ export async function onRequestPost(context) {
             )
           );
       const variantGender = ["men", "women", "unisex"].includes(v.gender) ? v.gender : "unisex";
-      return { ...v, size_key, gender: variantGender };
+      // Legacy shoe data may use 'eu' instead of 'uk'.
+      const normalizedSizeKey =
+        category_id === "cat-shoes" && size_key.includes("eu:")
+          ? size_key.replace(/eu:/g, "uk:")
+          : size_key;
+      return { ...v, size_key: normalizedSizeKey, gender: variantGender };
     })
     .filter((v) => v.size_key && v.colorway);
 

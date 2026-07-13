@@ -26,7 +26,12 @@ export async function onRequestGet(context) {
     .bind(id)
     .all();
 
-  const mergedVariants = mergeDuplicateVariants(variants);
+  const mergedVariants = mergeDuplicateVariants(variants).map((v) => {
+    if (product.category_id === "cat-shoes" && v.size_key && v.size_key.includes("eu:")) {
+      return { ...v, size_key: v.size_key.replace(/eu:/g, "uk:") };
+    }
+    return v;
+  });
 
   return jsonResponse({
     ...product,
