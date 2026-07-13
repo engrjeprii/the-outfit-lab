@@ -157,6 +157,15 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadCategories = useCallback(async () => {
+    try {
+      const cats = await api.getCategories();
+      setCategories(cats);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+
   useEffect(() => {
     if (!api.isAdminToken(getToken())) {
       navigate("/admin/login", { replace: true });
@@ -164,17 +173,12 @@ export default function AdminDashboard() {
     }
 
     async function load() {
-      try {
-        const cats = await api.getCategories();
-        setCategories(cats);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+      setLoading(true);
+      await loadCategories();
+      setLoading(false);
     }
     load();
-  }, [navigate]);
+  }, [navigate, loadCategories]);
 
   if (loading) return <div className="page-status">Loading...</div>;
   if (error) return <div className="page-status error">{error}</div>;
@@ -199,7 +203,7 @@ export default function AdminDashboard() {
 
       {tab === "products" && <ProductManager categories={categories} />}
       {tab === "categories" && (
-        <CategoryManager categories={categories} onChange={setCategories} />
+        <CategoryManager categories={categories} onChange={setCategories} onRefresh={loadCategories} />
       )}
       {tab === "orders" && <OrderManager />}
       {tab === "reports" && <ReportsManager />}
@@ -207,16 +211,24 @@ export default function AdminDashboard() {
   );
 }
 
-function CategoryManager({ categories, onChange }) {
+function CategoryManager({ categories, onChange, onRefresh }) {
   const [name, setName] = useState("");
   const [schemaInput, setSchemaInput] = useState("");
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const resetForm = () => {
     setName("");
     setSchemaInput("");
     setEditingId(null);
+  };
+
+  const handleRefresh = async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    await onRefresh();
+    setRefreshing(false);
   };
 
   const handleSubmit = async (e) => {
@@ -245,7 +257,17 @@ function CategoryManager({ categories, onChange }) {
 
   return (
     <div className="admin-section">
-      <h2>{editingId ? "Edit Category" : "Categories"}</h2>
+      <div className="admin-section-header">
+        <h2>{editingId ? "Edit Category" : "Categories"}</h2>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          Refresh
+        </button>
+      </div>
       {error && <p className="error">{error}</p>}
       <form onSubmit={handleSubmit} className="admin-form">
         <label>Name</label>
@@ -475,6 +497,14 @@ function ProductManager({ categories }) {
           )}
         </button>
         <div className="admin-list-filters">{filterFields}</div>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={refreshProducts}
+          disabled={loading}
+        >
+          Refresh
+        </button>
         <button
           className="btn btn-primary admin-add-product-btn"
           onClick={() => setEditing({})}
@@ -1201,7 +1231,17 @@ function OrderManager() {
 
   return (
     <div className="admin-section">
-      <h2>Orders</h2>
+      <div className="admin-section-header">
+        <h2>Orders</h2>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={loadOrders}
+          disabled={loading}
+        >
+          Refresh
+        </button>
+      </div>
       <form onSubmit={handleLookup} className="admin-form">
         <label>Order Code</label>
         <input
@@ -1478,7 +1518,17 @@ function ReportsManager() {
     <div className="reports-manager">
       <div className="reports-header">
         <h2>Reports</h2>
-        <SortSelect label="Range" options={rangeOptions} value={range} onChange={setRange} />
+        <div className="reports-header-actions">
+          <SortSelect label="Range" options={rangeOptions} value={range} onChange={setRange} />
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={load}
+            disabled={loading}
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {loading && <div className="page-status">Loading reports...</div>}
