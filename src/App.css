@@ -1149,6 +1149,28 @@ input, select, textarea {
   padding: var(--space-lg);
 }
 
+.report-product-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  width: 100%;
+}
+
+.report-product-name {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.report-product-meta {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.report-product-stock {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
 @media (min-width: 640px) {
   .reports-header {
     flex-direction: row;

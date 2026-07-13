@@ -1422,6 +1422,29 @@ function ReportsManager() {
     }
   }
 
+  async function showProducts(title, predicate) {
+    setModal({ title, loading: true, items: [] });
+    try {
+      const result = await api.getProducts();
+      const products = result.products || result || [];
+      const items = [];
+      for (const product of products) {
+        const matching = (product.variants || []).filter(predicate);
+        for (const v of matching) {
+          items.push({
+            product: product.name,
+            sku: product.sku,
+            variant: `${v.gender || "unisex"} / ${displaySize(v.size_key, v.gender)} / ${v.colorway}`,
+            stock: v.stock_qty,
+          });
+        }
+      }
+      setModal({ title, loading: false, items });
+    } catch (err) {
+      setModal({ title, loading: false, error: err.message, items: [] });
+    }
+  }
+
   const rangeOptions = [
     { value: "today", label: "Today" },
     { value: "7d", label: "Last 7 days" },
@@ -1512,15 +1535,57 @@ function ReportsManager() {
           <section className="reports-section">
             <h3>Inventory</h3>
             <div className="reports-grid">
-              <div className="report-card">
+              <div
+                className="report-card clickable"
+                onClick={() => showProducts("All Products", () => true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") showProducts("All Products", () => true);
+                }}
+              >
                 <span className="report-value">{data.inventory.total_products}</span>
                 <span className="report-label">Products</span>
               </div>
-              <div className="report-card warning">
+              <div
+                className="report-card warning clickable"
+                onClick={() =>
+                  showProducts(
+                    "Low Stock Items",
+                    (v) => v.stock_qty <= 5 && v.stock_qty > 0
+                  )
+                }
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    showProducts(
+                      "Low Stock Items",
+                      (v) => v.stock_qty <= 5 && v.stock_qty > 0
+                    );
+                }}
+              >
                 <span className="report-value">{data.inventory.low_stock}</span>
                 <span className="report-label">Low Stock</span>
               </div>
-              <div className="report-card danger">
+              <div
+                className="report-card danger clickable"
+                onClick={() =>
+                  showProducts(
+                    "Out of Stock Items",
+                    (v) => v.stock_qty === 0 || v.sold_out
+                  )
+                }
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ")
+                    showProducts(
+                      "Out of Stock Items",
+                      (v) => v.stock_qty === 0 || v.sold_out
+                    );
+                }}
+              >
                 <span className="report-value">{data.inventory.out_of_stock}</span>
                 <span className="report-label">Out of Stock</span>
               </div>
@@ -1535,15 +1600,29 @@ function ReportsManager() {
             {modal.loading && <div className="page-status">Loading...</div>}
             {modal.error && <div className="page-status error">{modal.error}</div>}
             {!modal.loading && !modal.error && modal.items.length === 0 && (
-              <div className="report-orders-empty">No orders found.</div>
+              <div className="report-orders-empty">No items found.</div>
             )}
             {!modal.loading && !modal.error && modal.items.length > 0 && (
               <ul className="report-orders-list">
-                {modal.items.map((id) => (
-                  <li key={id}>
-                    <span>{id}</span>
-                  </li>
-                ))}
+                {modal.items.map((item, idx) => {
+                  const isString = typeof item === "string";
+                  const key = isString ? item : `${item.sku}-${item.variant}-${idx}`;
+                  return (
+                    <li key={key}>
+                      {isString ? (
+                        <span>{item}</span>
+                      ) : (
+                        <div className="report-product-row">
+                          <span className="report-product-name">{item.product}</span>
+                          <span className="report-product-meta">{item.variant}</span>
+                          {item.stock !== undefined && (
+                            <span className="report-product-stock">Stock: {item.stock}</span>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
             <div className="form-actions">
