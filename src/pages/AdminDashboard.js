@@ -1321,7 +1321,7 @@ function OrderManager() {
                     value={order.shipping_status || "pending"}
                     onChange={(value) => setOrder({ ...order, shipping_status: value })}
                   />
-                  <label>Tracking number</label>
+                  <label>Tracking Number</label>
                   <input
                     type="text"
                     value={order.tracking_number || ""}
