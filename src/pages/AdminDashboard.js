@@ -258,7 +258,7 @@ function CategoryManager({ categories, onChange, onRefresh }) {
   return (
     <div className="admin-section">
       <div className="admin-section-header">
-        <h2>{editingId ? "Edit Category" : "Categories"}</h2>
+        {editingId ? <h2>Edit Category</h2> : <span />}
         <button
           type="button"
           className="btn btn-secondary"
@@ -1232,7 +1232,7 @@ function OrderManager() {
   return (
     <div className="admin-section">
       <div className="admin-section-header">
-        <h2>Orders</h2>
+        <span />
         <button
           type="button"
           className="btn btn-secondary"
