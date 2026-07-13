@@ -1066,18 +1066,29 @@ input, select, textarea {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  color: inherit;
   cursor: default;
+  font: inherit;
+  text-align: left;
   transition: transform 0.1s, box-shadow 0.1s, border-color 0.15s;
+  width: 100%;
+}
+
+button.report-card {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .report-card.clickable {
   cursor: pointer;
 }
 
-.report-card.clickable:hover {
+.report-card.clickable:hover,
+.report-card.clickable:focus-visible {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border-color: var(--text);
+  outline: none;
 }
 
 .report-card.highlight {

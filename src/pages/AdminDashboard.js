@@ -1542,19 +1542,16 @@ function ReportsManager() {
           <section className="reports-section">
             <h3>Inventory</h3>
             <div className="reports-grid">
-              <div
+              <button
+                type="button"
                 className="report-card clickable"
                 onClick={() => showProducts("All Products", () => true)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") showProducts("All Products", () => true);
-                }}
               >
                 <span className="report-value">{data.inventory.total_products}</span>
                 <span className="report-label">Products</span>
-              </div>
-              <div
+              </button>
+              <button
+                type="button"
                 className="report-card warning clickable"
                 onClick={() =>
                   showProducts(
@@ -1562,20 +1559,12 @@ function ReportsManager() {
                     (v) => v.stock_qty <= 5 && v.stock_qty > 0
                   )
                 }
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ")
-                    showProducts(
-                      "Low Stock Items",
-                      (v) => v.stock_qty <= 5 && v.stock_qty > 0
-                    );
-                }}
               >
                 <span className="report-value">{data.inventory.low_stock}</span>
                 <span className="report-label">Low Stock</span>
-              </div>
-              <div
+              </button>
+              <button
+                type="button"
                 className="report-card danger clickable"
                 onClick={() =>
                   showProducts(
@@ -1583,19 +1572,10 @@ function ReportsManager() {
                     (v) => v.stock_qty === 0 || v.sold_out
                   )
                 }
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ")
-                    showProducts(
-                      "Out of Stock Items",
-                      (v) => v.stock_qty === 0 || v.sold_out
-                    );
-                }}
               >
                 <span className="report-value">{data.inventory.out_of_stock}</span>
                 <span className="report-label">Out of Stock</span>
-              </div>
+              </button>
             </div>
           </section>
         </>
