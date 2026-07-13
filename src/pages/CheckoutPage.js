@@ -112,6 +112,11 @@ export default function CheckoutPage() {
       </div>
 
       <div className="order-summary">
+        <p className="checkout-warning">
+          Your order is not final until confirmed by our team via messenger. Stock is not reserved
+          during this time, and items may sell out. Please message us within 24 hours to complete
+          your order.
+        </p>
         {order.items.map((item, idx) => (
           <div key={idx} className="order-summary-item">
             <span>
@@ -140,6 +145,12 @@ export default function CheckoutPage() {
           </button>
         </div>
       )}
+
+      <p className="checkout-warning">
+        Your order is not final until confirmed by our team via messenger. Stock is not reserved
+        during this time, and items may sell out. Please message us within 24 hours to complete
+        your order.
+      </p>
 
       <a
         href={MESSENGER_URL}
