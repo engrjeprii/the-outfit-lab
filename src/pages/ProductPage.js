@@ -143,7 +143,9 @@ export default function ProductPage() {
   if (!product) return <div className="page-status">Product not found.</div>;
 
   const colorways = [...new Set(product.variants.map((v) => v.colorway))];
-  const defaultColorway = colorways.length > 0 ? colorways[0] : null;
+  const hasOnlyDefault = colorways.length === 1 && colorways[0] === "Default";
+  const displayColorways = hasOnlyDefault ? [] : colorways.filter((c) => c !== "Default");
+  const defaultColorway = hasOnlyDefault ? "Default" : (displayColorways[0] || null);
 
   // For shoes, derive available genders and sizes from size_chart rows.
   const shoeGenders = isShoes
@@ -241,11 +243,11 @@ export default function ProductPage() {
             </div>
           )}
 
-          {colorways.length > 0 && (
+          {displayColorways.length > 0 && (
             <div className="selector-group">
               <label>Color</label>
               <div className="selector-options">
-                {colorways.map((color) => {
+                {displayColorways.map((color) => {
                   const available = selectedSize
                     ? isVariantAvailable(selectedSize, color, isShoes ? activeShoeGender : null)
                     : product.variants.some(
