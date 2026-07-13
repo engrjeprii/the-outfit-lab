@@ -6,9 +6,10 @@ import { formatPrice } from "../components/ProductCard";
 import { displaySize } from "../components/SizeColorSelector";
 
 function shoeSizeKey(row) {
-  return ["us", "uk"]
-    .map((k) => (row[k] ? `${k}:${row[k]}` : null))
-    .filter(Boolean)
+  return Object.entries({ us: row.us, uk: row.uk })
+    .filter(([, v]) => v)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}:${v}`)
     .join("|");
 }
 
