@@ -189,7 +189,7 @@ export default function ProductPage() {
 
   return (
     <React.Fragment>
-      <Link to="/" className="back-link">
+      <Link to="/shop" className="back-link">
         <BackIcon /> Back to Shop
       </Link>
 

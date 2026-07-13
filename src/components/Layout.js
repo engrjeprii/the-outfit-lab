@@ -57,8 +57,8 @@ function CartIcon({ count }) {
 }
 
 const NAV_LINKS = [
-  { to: "/", label: "Shop" },
-  // { to: "/?sort=newest", label: "New Arrivals" },
+  { to: "/", label: "Home" },
+  { to: "/shop", label: "Shop" },
   { to: "/collections", label: "Collections" },
   // { to: "/", label: "Sale" },
 ];

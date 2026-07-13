@@ -184,7 +184,7 @@ export default function CollectionPage() {
         {selectedCategory ? (
           <>
             {" / "}
-            <Link to="/">Shop</Link>
+            <Link to="/shop">Shop</Link>
             {" / "}
             {selectedCategory.name}
           </>

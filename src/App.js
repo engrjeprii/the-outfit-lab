@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 import { CartProvider } from "./cart";
 import Layout from "./components/Layout";
+import HomePage from "./pages/HomePage";
 import CollectionPage from "./pages/CollectionPage";
 import ProductPage from "./pages/ProductPage";
 import CartPage from "./pages/CartPage";
@@ -17,7 +18,8 @@ function App() {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Layout>
           <Routes>
-            <Route path="/" element={<CollectionPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/shop" element={<CollectionPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/products/:id" element={<ProductPage />} />
             <Route path="/cart" element={<CartPage />} />

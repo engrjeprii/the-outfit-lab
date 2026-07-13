@@ -29,12 +29,12 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="cart-page empty">
-        <Link to="/" className="back-link">
+        <Link to="/shop" className="back-link">
           <BackIcon /> Continue Shopping
         </Link>
         <h1>Your Cart</h1>
         <p>Your cart is empty.</p>
-        <Link to="/" className="btn btn-primary">Continue Shopping</Link>
+        <Link to="/shop" className="btn btn-primary">Continue Shopping</Link>
       </div>
     );
   }
@@ -45,7 +45,7 @@ export default function CartPage() {
 
   return (
     <div className="cart-page">
-      <Link to="/" className="back-link">
+      <Link to="/shop" className="back-link">
         <BackIcon /> Continue Shopping
       </Link>
       <h1>Your Cart ({items.reduce((sum, i) => sum + i.quantity, 0)})</h1>
@@ -126,7 +126,7 @@ export default function CartPage() {
             >
               Checkout
             </button>
-            <Link to="/" className="btn btn-secondary btn-large">
+            <Link to="/shop" className="btn btn-secondary btn-large">
               Continue Shopping
             </Link>
           </div>
