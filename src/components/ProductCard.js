@@ -17,6 +17,7 @@ export default function ProductCard({ product }) {
   const cartItem = items.find((i) => i.product_id === product.id);
   const inCart = Boolean(cartItem);
   const cartQuantity = cartItem?.quantity || 0;
+  const isSoldOut = (product.total_stock || 0) === 0;
 
   return (
     <div className="product-card">
@@ -26,7 +27,8 @@ export default function ProductCard({ product }) {
         ) : (
           <div className="product-image-placeholder" />
         )}
-        {inCart && <span className="in-cart-badge">In Cart</span>}
+        {isSoldOut && <span className="sold-out-badge">Sold out</span>}
+        {!isSoldOut && inCart && <span className="in-cart-badge">In Cart</span>}
       </Link>
       <div className="product-info">
         <p className="product-brand">{product.brand} <span className="product-gender">{genderLabel(product)}</span></p>
