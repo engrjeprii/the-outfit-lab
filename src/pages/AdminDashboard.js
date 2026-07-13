@@ -1110,9 +1110,8 @@ function OrderManager() {
     setConfirming(true);
     try {
       await api.confirmOrder(order.id, getToken());
-      const updated = await api.getOrder(order.id);
-      setOrder(updated);
-      loadOrders();
+      await loadOrders();
+      setOrder(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1133,9 +1132,8 @@ function OrderManager() {
         shipping_status: order.shipping_status,
         tracking_number: order.tracking_number,
       });
-      const updated = await api.getOrder(order.id);
-      setOrder(updated);
-      loadOrders();
+      await loadOrders();
+      setOrder(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1306,7 +1304,8 @@ function OrderManager() {
                 </button>
               </div>
             )}
-            {order.status === "confirmed" && (
+            {order.status === "confirmed" &&
+              !["delivered", "pickup"].includes(order.shipping_status) && (
               <>
                 <div className="order-shipping-edit">
                   <SortSelect
@@ -1342,6 +1341,14 @@ function OrderManager() {
                   </button>
                 </div>
               </>
+            )}
+            {order.status === "confirmed" &&
+              ["delivered", "pickup"].includes(order.shipping_status) && (
+              <div className="form-actions">
+                <button className="btn btn-secondary" onClick={handleCloseOrder}>
+                  Close
+                </button>
+              </div>
             )}
             {order.status !== "pending" && order.status !== "confirmed" && (
               <div className="form-actions">
