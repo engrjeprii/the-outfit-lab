@@ -519,6 +519,66 @@ const mockApi = {
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   },
 
+  getReports: async (range = "30d") => {
+    await delay();
+    if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
+      throw new Error("Unauthorized");
+    }
+
+    const now = new Date();
+    const cutoff =
+      range === "today"
+        ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        : range === "7d"
+        ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        : range === "30d"
+        ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        : null;
+
+    const filtered = Object.values(orders).filter((o) => {
+      if (!cutoff) return true;
+      return new Date(o.created_at) >= cutoff;
+    });
+
+    const orderSummary = filtered.reduce(
+      (acc, o) => {
+        acc.total += 1;
+        if (o.status === "pending") acc.pending += 1;
+        if (o.status === "confirmed") {
+          acc.confirmed += 1;
+          acc.revenue += o.total;
+        }
+        if (o.status === "cancelled") acc.cancelled += 1;
+        return acc;
+      },
+      { total: 0, pending: 0, confirmed: 0, cancelled: 0, revenue: 0 }
+    );
+
+    const shipping = filtered
+      .filter((o) => o.status === "confirmed" && o.shipping_status)
+      .reduce(
+        (acc, o) => {
+          acc[o.shipping_status] = (acc[o.shipping_status] || 0) + 1;
+          return acc;
+        },
+        { pending: 0, packed: 0, shipped: 0, delivered: 0, pickup: 0 }
+      );
+
+    const inventory = products.reduce(
+      (acc, p) => {
+        acc.total_products += 1;
+        for (const v of p.variants || []) {
+          if (v.stock_qty <= 5 && v.stock_qty > 0) acc.low_stock += 1;
+          if (v.stock_qty === 0 || v.sold_out) acc.out_of_stock += 1;
+        }
+        return acc;
+      },
+      { total_products: 0, low_stock: 0, out_of_stock: 0 }
+    );
+
+    return { orders: orderSummary, shipping, inventory, range };
+  },
+
   adminLogin: async ({ password }) => {
     await delay();
     if (password !== ADMIN_PASSWORD) throw new Error("Invalid password");
@@ -803,6 +863,12 @@ const realApi = {
 
   listOrders: async () => {
     return apiRequest("/admin/orders");
+  },
+
+  getReports: async (range = "30d") => {
+    const params = new URLSearchParams();
+    params.set("range", range);
+    return apiRequest(`/admin/reports?${params.toString()}`);
   },
 
   adminLogin: async ({ password }) => {

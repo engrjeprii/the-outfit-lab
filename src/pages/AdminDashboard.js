@@ -185,6 +185,9 @@ export default function AdminDashboard() {
         <button className={tab === "orders" ? "active" : ""} onClick={() => setTab("orders")}>
           Orders
         </button>
+        <button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")}>
+          Reports
+        </button>
       </div>
 
       {tab === "products" && <ProductManager categories={categories} />}
@@ -192,6 +195,7 @@ export default function AdminDashboard() {
         <CategoryManager categories={categories} onChange={setCategories} />
       )}
       {tab === "orders" && <OrderManager />}
+      {tab === "reports" && <ReportsManager />}
     </div>
   );
 }
@@ -1359,6 +1363,115 @@ function OrderManager() {
             )}
           </div>
         </Modal>
+      )}
+    </div>
+  );
+}
+
+function ReportsManager() {
+  const [range, setRange] = useState("30d");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await api.getReports(range);
+      setData(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [range]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const rangeOptions = [
+    { value: "today", label: "Today" },
+    { value: "7d", label: "Last 7 days" },
+    { value: "30d", label: "Last 30 days" },
+    { value: "all", label: "All time" },
+  ];
+
+  return (
+    <div className="reports-manager">
+      <div className="reports-header">
+        <h2>Reports</h2>
+        <SortSelect label="Range" options={rangeOptions} value={range} onChange={setRange} />
+      </div>
+
+      {loading && <div className="page-status">Loading reports...</div>}
+      {error && <div className="page-status error">{error}</div>}
+
+      {!loading && data && (
+        <>
+          <section className="reports-section">
+            <h3>Orders</h3>
+            <div className="reports-grid">
+              <div className="report-card">
+                <span className="report-value">{data.orders.total}</span>
+                <span className="report-label">Total Orders</span>
+              </div>
+              <div className="report-card">
+                <span className="report-value">{data.orders.pending}</span>
+                <span className="report-label">Pending</span>
+              </div>
+              <div className="report-card">
+                <span className="report-value">{data.orders.confirmed}</span>
+                <span className="report-label">Confirmed</span>
+              </div>
+              <div className="report-card">
+                <span className="report-value">{data.orders.cancelled}</span>
+                <span className="report-label">Cancelled</span>
+              </div>
+              <div className="report-card highlight">
+                <span className="report-value">{formatPrice(data.orders.revenue)}</span>
+                <span className="report-label">Revenue</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="reports-section">
+            <h3>Shipping</h3>
+            <div className="reports-grid">
+              {[
+                { key: "pending", label: "Pending" },
+                { key: "packed", label: "Packed" },
+                { key: "shipped", label: "Shipped" },
+                { key: "delivered", label: "Delivered" },
+                { key: "pickup", label: "Pickup" },
+              ].map(({ key, label }) => (
+                <div className="report-card" key={key}>
+                  <span className="report-value">{data.shipping[key] || 0}</span>
+                  <span className="report-label">{label}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="reports-section">
+            <h3>Inventory</h3>
+            <div className="reports-grid">
+              <div className="report-card">
+                <span className="report-value">{data.inventory.total_products}</span>
+                <span className="report-label">Products</span>
+              </div>
+              <div className="report-card warning">
+                <span className="report-value">{data.inventory.low_stock}</span>
+                <span className="report-label">Low Stock</span>
+              </div>
+              <div className="report-card danger">
+                <span className="report-value">{data.inventory.out_of_stock}</span>
+                <span className="report-label">Out of Stock</span>
+              </div>
+            </div>
+          </section>
+        </>
       )}
     </div>
   );
