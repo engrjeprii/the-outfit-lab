@@ -1373,6 +1373,7 @@ function ReportsManager() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [modal, setModal] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1391,11 +1392,56 @@ function ReportsManager() {
     load();
   }, [load]);
 
+  function rangeCutoff(rangeValue) {
+    const now = new Date();
+    switch (rangeValue) {
+      case "today":
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      case "7d":
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case "30d":
+        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case "all":
+      default:
+        return null;
+    }
+  }
+
+  async function showOrders(title, predicate) {
+    setModal({ title, loading: true, items: [] });
+    try {
+      const all = await api.listOrders();
+      const cutoff = rangeCutoff(range);
+      const filtered = all.filter((o) => {
+        if (cutoff && new Date(o.created_at) < cutoff) return false;
+        return predicate(o);
+      });
+      setModal({ title, loading: false, items: filtered.map((o) => o.id) });
+    } catch (err) {
+      setModal({ title, loading: false, error: err.message, items: [] });
+    }
+  }
+
   const rangeOptions = [
     { value: "today", label: "Today" },
     { value: "7d", label: "Last 7 days" },
     { value: "30d", label: "Last 30 days" },
     { value: "all", label: "All time" },
+  ];
+
+  const orderCards = [
+    { key: "total", label: "Total Orders", filter: () => true },
+    { key: "pending", label: "Pending", filter: (o) => o.status === "pending" },
+    { key: "confirmed", label: "Confirmed", filter: (o) => o.status === "confirmed" },
+    { key: "cancelled", label: "Cancelled", filter: (o) => o.status === "cancelled" },
+  ];
+
+  const shippingCards = [
+    { key: "pending", label: "Pending" },
+    { key: "packed", label: "Packed" },
+    { key: "shipped", label: "Shipped" },
+    { key: "delivered", label: "Delivered" },
+    { key: "pickup", label: "Pickup" },
   ];
 
   return (
@@ -1413,22 +1459,21 @@ function ReportsManager() {
           <section className="reports-section">
             <h3>Orders</h3>
             <div className="reports-grid">
-              <div className="report-card">
-                <span className="report-value">{data.orders.total}</span>
-                <span className="report-label">Total Orders</span>
-              </div>
-              <div className="report-card">
-                <span className="report-value">{data.orders.pending}</span>
-                <span className="report-label">Pending</span>
-              </div>
-              <div className="report-card">
-                <span className="report-value">{data.orders.confirmed}</span>
-                <span className="report-label">Confirmed</span>
-              </div>
-              <div className="report-card">
-                <span className="report-value">{data.orders.cancelled}</span>
-                <span className="report-label">Cancelled</span>
-              </div>
+              {orderCards.map(({ key, label, filter }) => (
+                <div
+                  className="report-card clickable"
+                  key={key}
+                  onClick={() => showOrders(`${label} Orders`, filter)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") showOrders(`${label} Orders`, filter);
+                  }}
+                >
+                  <span className="report-value">{data.orders[key]}</span>
+                  <span className="report-label">{label}</span>
+                </div>
+              ))}
               <div className="report-card highlight">
                 <span className="report-value">{formatPrice(data.orders.revenue)}</span>
                 <span className="report-label">Revenue</span>
@@ -1439,14 +1484,24 @@ function ReportsManager() {
           <section className="reports-section">
             <h3>Shipping</h3>
             <div className="reports-grid">
-              {[
-                { key: "pending", label: "Pending" },
-                { key: "packed", label: "Packed" },
-                { key: "shipped", label: "Shipped" },
-                { key: "delivered", label: "Delivered" },
-                { key: "pickup", label: "Pickup" },
-              ].map(({ key, label }) => (
-                <div className="report-card" key={key}>
+              {shippingCards.map(({ key, label }) => (
+                <div
+                  className="report-card clickable"
+                  key={key}
+                  onClick={() =>
+                    showOrders(`${label} Shipping`, (o) =>
+                      o.status === "confirmed" && o.shipping_status === key
+                    )
+                  }
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ")
+                      showOrders(`${label} Shipping`, (o) =>
+                        o.status === "confirmed" && o.shipping_status === key
+                      );
+                  }}
+                >
                   <span className="report-value">{data.shipping[key] || 0}</span>
                   <span className="report-label">{label}</span>
                 </div>
@@ -1472,6 +1527,30 @@ function ReportsManager() {
             </div>
           </section>
         </>
+      )}
+
+      {modal && (
+        <Modal title={modal.title} onClose={() => setModal(null)}>
+          <div className="order-detail-modal">
+            {modal.loading && <div className="page-status">Loading...</div>}
+            {modal.error && <div className="page-status error">{modal.error}</div>}
+            {!modal.loading && !modal.error && modal.items.length === 0 && (
+              <div className="report-orders-empty">No orders found.</div>
+            )}
+            {!modal.loading && !modal.error && modal.items.length > 0 && (
+              <ul className="report-orders-list">
+                {modal.items.map((id) => (
+                  <li key={id}>
+                    <span>{id}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="form-actions">
+              <button className="btn btn-secondary" onClick={() => setModal(null)}>Close</button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

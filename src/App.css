@@ -1053,7 +1053,7 @@ input, select, textarea {
 
 .reports-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
   gap: var(--space-md);
 }
 
@@ -1061,10 +1061,23 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+  min-width: 0;
   padding: var(--space-md);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  cursor: default;
+  transition: transform 0.1s, box-shadow 0.1s, border-color 0.15s;
+}
+
+.report-card.clickable {
+  cursor: pointer;
+}
+
+.report-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--text);
 }
 
 .report-card.highlight {
@@ -1083,6 +1096,10 @@ input, select, textarea {
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--text);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .report-card.highlight .report-value {
@@ -1102,6 +1119,34 @@ input, select, textarea {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
+}
+
+.report-orders-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.report-orders-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+}
+
+.report-orders-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: var(--space-lg);
 }
 
 @media (min-width: 640px) {
