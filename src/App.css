@@ -2147,13 +2147,16 @@ button.report-card {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--control-height);
+  gap: 0.375rem;
+  min-width: var(--control-height);
   height: var(--control-height);
-  padding: 0;
+  padding: 0 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
+  font-size: 0.8125rem;
+  white-space: nowrap;
   transition: border-color 0.15s;
 }
 
