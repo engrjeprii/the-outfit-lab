@@ -34,6 +34,7 @@ export async function onRequestPost(context) {
     brand,
     gender = "unisex",
     images = [],
+    videos = [],
     details = {},
     size_chart = [],
     variants = [],
@@ -119,7 +120,7 @@ export async function onRequestPost(context) {
   if (existing) {
     productId = existing.id;
     await env.DB.prepare(
-      "UPDATE products SET category_id = ?, brand = ?, gender = ?, name = ?, description = ?, price = ?, retail_price = ?, images = ?, details = ?, size_chart = ? WHERE id = ?"
+      "UPDATE products SET category_id = ?, brand = ?, gender = ?, name = ?, description = ?, price = ?, retail_price = ?, images = ?, videos = ?, details = ?, size_chart = ? WHERE id = ?"
     )
       .bind(
         category_id,
@@ -130,6 +131,7 @@ export async function onRequestPost(context) {
         price,
         retailPrice,
         JSON.stringify(images),
+        JSON.stringify(videos),
         JSON.stringify(details),
         JSON.stringify(filledSizeChart),
         productId
@@ -138,7 +140,7 @@ export async function onRequestPost(context) {
   } else {
     productId = generateId();
     await env.DB.prepare(
-      "INSERT INTO products (id, category_id, brand, gender, sku, name, description, price, retail_price, images, details, size_chart, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO products (id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         productId,
@@ -151,6 +153,7 @@ export async function onRequestPost(context) {
         price,
         retailPrice,
         JSON.stringify(images),
+        JSON.stringify(videos),
         JSON.stringify(details),
         JSON.stringify(filledSizeChart),
         now

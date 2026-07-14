@@ -743,6 +743,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
   const [fit, setFit] = useState(product.details?.fit || "");
   const [care, setCare] = useState(product.details?.care || "");
   const [images, setImages] = useState(product.images || []);
+  const [videos, setVideos] = useState(product.videos || []);
   const initialCategory = categories.find((c) => c.id === product.category_id);
   const initialCategoryIdRef = useRef(product.category_id || "");
   const [variantRows, setVariantRows] = useState(() =>
@@ -751,6 +752,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedImageName, setSelectedImageName] = useState("");
+  const [selectedVideoName, setSelectedVideoName] = useState("");
 
   const category = categories.find((c) => c.id === categoryId);
 
@@ -820,6 +822,22 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
     } catch (err) {
       alert(err.message);
       setSelectedImageName("");
+    } finally {
+      e.target.value = "";
+    }
+  };
+
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedVideoName(file.name);
+    try {
+      const { url } = await api.uploadVideo(file, getToken());
+      setVideos([url]);
+      setSelectedVideoName("");
+    } catch (err) {
+      alert(err.message);
+      setSelectedVideoName("");
     } finally {
       e.target.value = "";
     }
@@ -951,6 +969,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       brand,
       gender: productGender,
       images,
+      videos,
       details: { material, fit, care },
       size_chart: sizeChart,
       variants,
@@ -1115,6 +1134,34 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
           </div>
         ))}
       </div>
+
+      <h4>Product Video (optional)</h4>
+      <div className="file-input-wrap">
+        <label className={`file-input-label ${videos.length > 0 ? "disabled" : ""}`}>
+          <input
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime"
+            onChange={handleVideoUpload}
+            disabled={videos.length > 0}
+          />
+          <span>Choose Video</span>
+        </label>
+        <span className="file-input-hint">
+          {selectedVideoName || (videos.length > 0 ? "1 video added" : "No file chosen")}
+        </span>
+      </div>
+      {videos.length > 0 && (
+        <div className="video-preview-wrap">
+          <video src={videos[0]} controls muted preload="metadata" className="video-preview" />
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={() => setVideos([])}
+          >
+            Remove Video
+          </button>
+        </div>
+      )}
 
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={saving}>

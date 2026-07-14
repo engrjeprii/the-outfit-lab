@@ -11,7 +11,7 @@ export async function onRequestGet(context) {
   const id = params.id;
 
   const product = await env.DB.prepare(
-    "SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, details, size_chart, created_at FROM products WHERE id = ? AND deleted_at IS NULL"
+    "SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, created_at FROM products WHERE id = ? AND deleted_at IS NULL"
   )
     .bind(id)
     .first();
@@ -36,6 +36,7 @@ export async function onRequestGet(context) {
   return jsonResponse({
     ...product,
     images: JSON.parse(product.images),
+    videos: JSON.parse(product.videos || "[]"),
     details: JSON.parse(product.details),
     size_chart: JSON.parse(product.size_chart),
     variants: mergedVariants,

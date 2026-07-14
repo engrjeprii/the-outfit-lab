@@ -26,6 +26,7 @@ function genderLabel(product) {
 export default function ProductCard({ product }) {
   const { items } = useCart();
   const image = product.images[0];
+  const hasVideo = product.videos && product.videos.length > 0;
   const cartItem = items.find((i) => i.product_id === product.id);
   const inCart = Boolean(cartItem);
   const cartQuantity = cartItem?.quantity || 0;
@@ -41,6 +42,7 @@ export default function ProductCard({ product }) {
         )}
         {isSoldOut && <span className="sold-out-badge">Sold out</span>}
         {!isSoldOut && inCart && <span className="in-cart-badge">In Cart</span>}
+        {hasVideo && <span className="video-badge" aria-label="Has video">▶</span>}
       </Link>
       <div className="product-info">
         <p className="product-brand">{product.brand} <span className="product-gender">{genderLabel(product)}</span></p>

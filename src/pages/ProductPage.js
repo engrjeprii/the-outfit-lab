@@ -71,7 +71,7 @@ export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedGender, setSelectedGender] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [imageIndex, setImageIndex] = useState(0);
+  const [mediaIndex, setMediaIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
@@ -118,7 +118,7 @@ export default function ProductPage() {
     setSelectedColor("");
     setSelectedGender("");
     setQuantity(1);
-    setImageIndex(0);
+    setMediaIndex(0);
   }, [id]);
 
   useEffect(() => {
@@ -185,7 +185,15 @@ export default function ProductPage() {
     setTimeout(() => setAdded(false), 3000);
   };
 
-  const images = product.images && product.images.length > 0 ? product.images : [];
+  const images = product.images || [];
+  const videos = product.videos || [];
+  const mediaItems = [];
+  if (videos.length > 0) {
+    mediaItems.push({ type: "video", url: videos[0], poster: images[0] });
+  }
+  images.forEach((url) => mediaItems.push({ type: "image", url }));
+
+  const activeMedia = mediaItems[mediaIndex];
 
   return (
     <React.Fragment>
@@ -195,22 +203,64 @@ export default function ProductPage() {
 
       <div className="product-page">
         <div className="product-gallery">
-          <img
-            src={images[imageIndex] || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"}
-            alt={product.name}
-            className="product-gallery-main"
-          />
-          {images.length > 1 && (
+          {activeMedia ? (
+            activeMedia.type === "video" ? (
+              <video
+                key={`video-${mediaIndex}`}
+                src={activeMedia.url}
+                poster={activeMedia.poster}
+                controls
+                muted
+                playsInline
+                loop
+                autoPlay
+                preload="metadata"
+                className="product-gallery-main"
+                aria-label={`${product.name} video`}
+              />
+            ) : (
+              <img
+                key={`img-${mediaIndex}`}
+                src={activeMedia.url}
+                alt={product.name}
+                className="product-gallery-main"
+              />
+            )
+          ) : (
+            <img
+              src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+              alt={product.name}
+              className="product-gallery-main"
+            />
+          )}
+          {mediaItems.length > 1 && (
             <div className="product-gallery-thumbs">
-              {images.map((img, idx) => (
-                <img
-                  key={idx}
-                  src={img}
-                  alt={`${product.name} ${idx + 1}`}
-                  className={`product-gallery-thumb ${idx === imageIndex ? "active" : ""}`}
-                  onClick={() => setImageIndex(idx)}
-                />
-              ))}
+              {mediaItems.map((item, idx) =>
+                item.type === "video" ? (
+                  <div
+                    key={idx}
+                    className={`product-gallery-thumb video-thumb ${idx === mediaIndex ? "active" : ""}`}
+                    onClick={() => setMediaIndex(idx)}
+                    role="button"
+                    aria-label="Play product video"
+                  >
+                    {item.poster ? (
+                      <img src={item.poster} alt="Video thumbnail" />
+                    ) : (
+                      <div className="video-thumb-poster" />
+                    )}
+                    <span className="video-thumb-icon">▶</span>
+                  </div>
+                ) : (
+                  <img
+                    key={idx}
+                    src={item.url}
+                    alt={`${product.name} ${idx + 1}`}
+                    className={`product-gallery-thumb ${idx === mediaIndex ? "active" : ""}`}
+                    onClick={() => setMediaIndex(idx)}
+                  />
+                )
+              )}
             </div>
           )}
         </div>

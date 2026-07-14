@@ -118,7 +118,7 @@ export async function onRequestGet(context) {
 
   // Fetch page of products.
   const selectSql = `
-    SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, details, size_chart, created_at
+    SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, created_at
     FROM products
     ${where}
     ORDER BY ${orderBy}
@@ -177,6 +177,7 @@ export async function onRequestGet(context) {
   const products = results.map((p) => ({
     ...p,
     images: JSON.parse(p.images),
+    videos: JSON.parse(p.videos || "[]"),
     details: JSON.parse(p.details),
     size_chart: JSON.parse(p.size_chart),
     total_stock: stockMap.get(p.id)?.total_stock ?? 0,

@@ -366,6 +366,7 @@ const mockApi = {
         return {
           ...p,
           images: [...p.images],
+          videos: [...(p.videos || [])],
           details: { ...p.details },
           size_chart: p.size_chart.map((row) => ({ ...row })),
           variants: isAdmin ? p.variants.map((v) => ({ ...v })) : undefined,
@@ -465,6 +466,7 @@ const mockApi = {
     return {
       ...p,
       images: [...p.images],
+      videos: [...(p.videos || [])],
       details: { ...p.details },
       size_chart: p.size_chart.map((row) => ({ ...row })),
       variants: p.variants.map((v) => ({ ...v })),
@@ -653,6 +655,7 @@ const mockApi = {
       existing.price = product.price;
       existing.retail_price = product.retail_price || 0;
       existing.images = [...product.images];
+      existing.videos = [...(product.videos || [])];
       existing.details = { ...product.details };
       existing.size_chart = product.size_chart.map((row) => ({ ...row }));
 
@@ -699,6 +702,7 @@ const mockApi = {
       price: product.price,
       retail_price: product.retail_price || 0,
       images: [...product.images],
+      videos: [...(product.videos || [])],
       details: { ...product.details },
       size_chart: product.size_chart.map((row) => ({ ...row })),
       created_at: now,
@@ -771,6 +775,14 @@ const mockApi = {
       throw new Error("Unauthorized");
     }
     return { url: placeholderImage(file.name || "Image"), key: generateId() };
+  },
+
+  uploadVideo: async (file) => {
+    await delay();
+    if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
+      throw new Error("Unauthorized");
+    }
+    return { url: placeholderImage(file.name || "Video"), key: generateId() };
   },
 };
 
@@ -934,6 +946,15 @@ const realApi = {
   uploadImage: async (file) => {
     const formData = new FormData();
     formData.append("image", file);
+    return apiRequest("/admin/upload", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  uploadVideo: async (file) => {
+    const formData = new FormData();
+    formData.append("video", file);
     return apiRequest("/admin/upload", {
       method: "POST",
       body: formData,

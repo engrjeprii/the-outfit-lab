@@ -12,17 +12,33 @@ export async function onRequestPost(context) {
     return errorResponse("Invalid form data", 400);
   }
 
-  const file = formData.get("image") || formData.get("file");
+  const file = formData.get("image") || formData.get("video") || formData.get("file");
   if (!file || typeof file === "string") {
-    return errorResponse("Image file is required", 400);
+    return errorResponse("File is required", 400);
   }
 
-  const ext = file.name ? file.name.split(".").pop() : "jpg";
+  const isVideo = file.type && file.type.startsWith("video/");
+  const isImage = file.type && file.type.startsWith("image/");
+  if (!isVideo && !isImage) {
+    return errorResponse("Only image or video files are allowed", 400);
+  }
+
+  const maxSize = 100 * 1024 * 1024; // 100 MB
+  if (file.size > maxSize) {
+    return errorResponse("File must be under 100 MB", 400);
+  }
+
+  const allowedVideoTypes = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"];
+  if (isVideo && !allowedVideoTypes.includes(file.type)) {
+    return errorResponse("Video must be MP4, WebM, OGG, or QuickTime", 400);
+  }
+
+  const ext = file.name ? file.name.split(".").pop() : isVideo ? "mp4" : "jpg";
   const key = `${crypto.randomUUID()}.${ext}`;
 
   await env.IMAGES.put(key, file, {
     httpMetadata: {
-      contentType: file.type || "image/jpeg",
+      contentType: file.type || (isVideo ? "video/mp4" : "image/jpeg"),
     },
   });
 
