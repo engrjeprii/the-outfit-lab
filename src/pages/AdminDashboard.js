@@ -102,6 +102,10 @@ function emptyVariantRow(category) {
   (category?.size_schema || []).forEach((k) => {
     row[k] = "";
   });
+  if ((category?.size_schema || []).length === 1) {
+    const k = category.size_schema[0];
+    row[k] = k === "freesize" ? "FREESIZE" : k === "one_size" ? "OS" : k.toUpperCase();
+  }
   return row;
 }
 
@@ -730,6 +734,9 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
   const [name, setName] = useState(product.name || "");
   const [description, setDescription] = useState(product.description || "");
   const [price, setPrice] = useState(product.price ? product.price / 100 : "");
+  const [retailPrice, setRetailPrice] = useState(
+    product.retail_price ? product.retail_price / 100 : ""
+  );
   const [categoryId, setCategoryId] = useState(product.category_id || "");
   const [brand, setBrand] = useState(product.brand || "");
   const [material, setMaterial] = useState(product.details?.material || "");
@@ -860,14 +867,27 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       return;
     }
 
+    const retailPriceCents = retailPrice ? Math.round(parseFloat(retailPrice) * 100) : 0;
+    if (retailPriceCents > 0 && retailPriceCents < Math.round(parseFloat(price) * 100)) {
+      setError("Retail price must be greater than or equal to price.");
+      return;
+    }
+
     if (!material.trim() || !fit.trim() || !care.trim()) {
       setError("Material, fit, and care are required.");
       return;
     }
 
+    // Ignore variant rows that are completely empty (no colorway, no stock).
+    const nonEmptyRows = variantRows.filter((row) => {
+      const hasColorway = row.colorway && row.colorway.trim();
+      const hasStock = row.stock_qty && parseInt(row.stock_qty, 10) > 0;
+      return hasColorway || hasStock;
+    });
+
     const validRows = [];
-    for (let i = 0; i < variantRows.length; i++) {
-      const row = variantRows[i];
+    for (let i = 0; i < nonEmptyRows.length; i++) {
+      const row = nonEmptyRows[i];
       if (!row.gender) {
         setError(`Gender is required for variant ${i + 1}.`);
         return;
@@ -926,6 +946,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       name,
       description,
       price: Math.round(parseFloat(price) * 100),
+      retail_price: retailPriceCents,
       category_id: categoryId,
       brand,
       gender: productGender,
@@ -984,6 +1005,15 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         required
       />
 
+      <label>Retail Price (PHP)</label>
+      <input
+        type="number"
+        step="0.01"
+        value={retailPrice}
+        onChange={(e) => setRetailPrice(e.target.value)}
+        placeholder="Optional original/MSRP price"
+      />
+
       <h4>Details *</h4>
       <label>Material *</label>
       <input value={material} onChange={(e) => setMaterial(e.target.value)} required />
@@ -1006,7 +1036,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
             onChange={(value) => updateVariantRow(idx, "gender", value)}
             required
           />
-          {category.size_schema.map((k) => (
+          {category.size_schema.length > 1 && category.size_schema.map((k) => (
             <input
               key={k}
               placeholder={`${k.toUpperCase()} *`}
@@ -1015,6 +1045,9 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
               required
             />
           ))}
+          {category.size_schema.length === 1 && (
+            <span className="variant-size-auto">One Size</span>
+          )}
           <input
             placeholder="Color *"
             value={row.colorway || ""}

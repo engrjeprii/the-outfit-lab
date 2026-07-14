@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useCart } from "../cart";
-import { formatPrice } from "../components/ProductCard";
+import { Price } from "../components/ProductCard";
 import { displaySize } from "../components/SizeColorSelector";
 
 function shoeSizeKey(row) {
@@ -218,7 +218,9 @@ export default function ProductPage() {
         <div className="product-details">
           <p className="product-brand">{product.brand} <span className="product-gender">{availableGenderLabel(product)}</span></p>
           <h1>{product.name}</h1>
-          <p className="product-price-large">{formatPrice(product.price)}</p>
+          <p className="product-price-large">
+            <Price price={product.price} retailPrice={product.retail_price} />
+          </p>
           <p className="product-description">{product.description}</p>
 
           {isShoes && shoeGenders.length > 0 && (

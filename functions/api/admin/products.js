@@ -29,6 +29,7 @@ export async function onRequestPost(context) {
     name,
     description,
     price,
+    retail_price,
     category_id,
     brand,
     gender = "unisex",
@@ -44,10 +45,36 @@ export async function onRequestPost(context) {
 
   const normalizedGender = ["men", "women", "unisex"].includes(gender) ? gender : "unisex";
   const now = new Date().toISOString();
+  const retailPrice = retail_price ? parseInt(retail_price, 10) : 0;
+
+  if (retailPrice > 0 && retailPrice < price) {
+    return errorResponse("retail_price must be greater than or equal to price", 400);
+  }
+
+  // Fetch category to support single-size auto-fill.
+  const category = await env.DB.prepare("SELECT size_schema FROM categories WHERE id = ?")
+    .bind(category_id)
+    .first();
+  const sizeSchema = category ? JSON.parse(category.size_schema || "[]") : [];
+
+  // Auto-fill size_chart and variant size_key for single-size categories.
+  let filledSizeChart = size_chart;
+  let filledVariants = variants;
+  if (sizeSchema.length === 1) {
+    const dim = sizeSchema[0];
+    const defaultValue = dim === "freesize" ? "FREESIZE" : dim === "one_size" ? "OS" : dim.toUpperCase();
+    if (!filledSizeChart || filledSizeChart.length === 0) {
+      filledSizeChart = [{ [dim]: defaultValue }];
+    }
+    filledVariants = variants.map((v) => {
+      if (v.size_key && !v.size_key.endsWith(":")) return v;
+      return { ...v, size_key: `${dim}:${defaultValue}` };
+    });
+  }
 
   // Validate that at least one complete variant is provided.
   // Normalize size_key by removing legacy gender/stock fields and merge duplicates.
-  const normalizedVariants = variants
+  const normalizedVariants = filledVariants
     .map((v) => {
       const size_key = v.size_key
         ? normalizeSizeKey(v.size_key)
@@ -92,7 +119,7 @@ export async function onRequestPost(context) {
   if (existing) {
     productId = existing.id;
     await env.DB.prepare(
-      "UPDATE products SET category_id = ?, brand = ?, gender = ?, name = ?, description = ?, price = ?, images = ?, details = ?, size_chart = ? WHERE id = ?"
+      "UPDATE products SET category_id = ?, brand = ?, gender = ?, name = ?, description = ?, price = ?, retail_price = ?, images = ?, details = ?, size_chart = ? WHERE id = ?"
     )
       .bind(
         category_id,
@@ -101,16 +128,17 @@ export async function onRequestPost(context) {
         name,
         description || "",
         price,
+        retailPrice,
         JSON.stringify(images),
         JSON.stringify(details),
-        JSON.stringify(size_chart),
+        JSON.stringify(filledSizeChart),
         productId
       )
       .run();
   } else {
     productId = generateId();
     await env.DB.prepare(
-      "INSERT INTO products (id, category_id, brand, gender, sku, name, description, price, images, details, size_chart, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO products (id, category_id, brand, gender, sku, name, description, price, retail_price, images, details, size_chart, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         productId,
@@ -121,9 +149,10 @@ export async function onRequestPost(context) {
         name,
         description || "",
         price,
+        retailPrice,
         JSON.stringify(images),
         JSON.stringify(details),
-        JSON.stringify(size_chart),
+        JSON.stringify(filledSizeChart),
         now
       )
       .run();

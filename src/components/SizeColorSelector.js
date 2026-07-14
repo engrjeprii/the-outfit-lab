@@ -23,6 +23,11 @@ export function displaySize(sizeKey, gender = null) {
   if (!sizeKey) return "";
   const parts = sizeKey.split("|").filter(Boolean);
   const isAlpha = parts.length === 1 && parts[0].startsWith("alpha:");
+  const isSingleSize = parts.length === 1 && (parts[0].startsWith("freesize:") || parts[0].startsWith("one_size:"));
+
+  if (isSingleSize) {
+    return "One Size";
+  }
 
   if (isAlpha) {
     const value = parts[0].split(":")[1];

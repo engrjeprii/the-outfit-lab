@@ -211,6 +211,7 @@ function generateMockProducts() {
       name: template.name,
       description: `Premium ${template.name.toLowerCase()} designed for everyday comfort and timeless style.`,
       price: template.price,
+      retail_price: template.retail_price || 0,
       images: [
         placeholderImage(template.name),
         placeholderImage(`${template.name} Back`),
@@ -650,6 +651,7 @@ const mockApi = {
       existing.name = product.name;
       existing.description = product.description;
       existing.price = product.price;
+      existing.retail_price = product.retail_price || 0;
       existing.images = [...product.images];
       existing.details = { ...product.details };
       existing.size_chart = product.size_chart.map((row) => ({ ...row }));
@@ -695,6 +697,7 @@ const mockApi = {
       name: product.name,
       description: product.description,
       price: product.price,
+      retail_price: product.retail_price || 0,
       images: [...product.images],
       details: { ...product.details },
       size_chart: product.size_chart.map((row) => ({ ...row })),

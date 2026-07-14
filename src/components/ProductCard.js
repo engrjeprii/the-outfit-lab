@@ -6,6 +6,18 @@ export function formatPrice(cents) {
   return `₱${(cents / 100).toFixed(2)}`;
 }
 
+export function Price({ price, retailPrice, className = "" }) {
+  const showRetail = retailPrice && retailPrice > price && price > 0;
+  return (
+    <span className={`price ${className}`}>
+      {showRetail && (
+        <span className="price-retail">{formatPrice(retailPrice)}</span>
+      )}
+      <span className="price-selling">{formatPrice(price)}</span>
+    </span>
+  );
+}
+
 function genderLabel(product) {
   const genders = product.available_genders || [product.gender || "unisex"];
   return genders.map((g) => g.charAt(0).toUpperCase() + g.slice(1)).join(" / ");
@@ -36,7 +48,7 @@ export default function ProductCard({ product }) {
           <h3 className="product-name">{product.name}</h3>
           {inCart && <span className="in-cart-dot" title={`${cartQuantity} in cart`} />}
         </div>
-        <p className="product-price">{formatPrice(product.price)}</p>
+        <p className="product-price"><Price price={product.price} retailPrice={product.retail_price} /></p>
       </div>
     </div>
   );

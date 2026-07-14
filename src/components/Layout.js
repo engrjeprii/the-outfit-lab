@@ -85,7 +85,9 @@ export default function Layout({ children }) {
                 <MenuIcon />
               </button>
 
-              <Link to="/" className="logo">The Outfit Lab</Link>
+              <Link to="/" className="logo">
+                <img src="/theoutfitlablogo.jpeg" alt="The Outfit Lab" />
+              </Link>
 
               <nav className="nav">
                 {NAV_LINKS.map((link) => (
@@ -104,7 +106,9 @@ export default function Layout({ children }) {
           <div className={`mobile-nav-overlay ${menuOpen ? "open" : ""}`} onClick={closeMenu} />
           <nav className={`mobile-nav ${menuOpen ? "open" : ""}`} aria-hidden={!menuOpen}>
             <div className="mobile-nav-header">
-              <Link to="/" className="logo" onClick={closeMenu}>The Outfit Lab</Link>
+              <Link to="/" className="logo" onClick={closeMenu}>
+                <img src="/theoutfitlablogo.jpeg" alt="The Outfit Lab" />
+              </Link>
               <button className="icon-btn" onClick={closeMenu} aria-label="Close menu">
                 <CloseIcon />
               </button>

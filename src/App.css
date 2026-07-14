@@ -77,11 +77,15 @@ input, select, textarea {
 }
 
 .logo {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  font-size: 1.5rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+}
+
+.logo img {
+  height: 40px;
+  width: auto;
+  display: block;
+  border-radius: 50%;
 }
 
 .nav {
@@ -551,6 +555,27 @@ input, select, textarea {
   font-weight: 500;
 }
 
+.price {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.price-retail {
+  text-decoration: line-through;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.price-selling {
+  color: var(--text);
+}
+
+.product-price-large .price-retail,
+.product-price-large .price-selling {
+  font-size: 1.125rem;
+}
+
 /* Product page */
 .product-page {
   display: flex;
@@ -622,6 +647,7 @@ input, select, textarea {
   color: var(--text-muted);
   line-height: 1.6;
   margin-bottom: var(--space-lg);
+  white-space: pre-line;
 }
 
 .detail-block {
@@ -2907,28 +2933,38 @@ body::-webkit-scrollbar,
 }
 
 .home-hero {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 60vh;
   padding: var(--space-xl) var(--space-md);
-  background: var(--surface);
+  background: var(--surface) center/cover no-repeat;
   border-bottom: 1px solid var(--border);
   text-align: center;
 }
 
+.home-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
 .home-hero-content {
+  position: relative;
+  z-index: 1;
   max-width: 600px;
 }
 
 .home-hero h1 {
   font-size: clamp(2.5rem, 8vw, 4.5rem);
   margin-bottom: var(--space-md);
+  color: #ffffff;
 }
 
 .home-hero p {
   font-size: 1.125rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.85);
   margin-bottom: var(--space-lg);
 }
 

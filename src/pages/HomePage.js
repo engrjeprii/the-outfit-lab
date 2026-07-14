@@ -50,7 +50,8 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
-      <section className="home-hero">
+      <section className="home-hero" style={{ backgroundImage: "url(/hero-bg.jpg)" }}>
+        <div className="home-hero-overlay" />
         <div className="home-hero-content">
           <h1>The Outfit Lab</h1>
           <p>Curated authentic apparel from the brands you trust.</p>
