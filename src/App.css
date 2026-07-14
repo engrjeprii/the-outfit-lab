@@ -604,7 +604,20 @@ input, select, textarea {
 @media (min-width: 768px) {
   .product-page {
     flex-direction: row;
+    justify-content: center;
     gap: var(--space-xl);
+  }
+
+  .product-gallery {
+    flex: 1 1 50%;
+    max-width: 600px;
+    min-width: 0;
+  }
+
+  .product-details {
+    flex: 1 1 50%;
+    max-width: 480px;
+    min-width: 0;
   }
 }
 
