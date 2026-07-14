@@ -199,7 +199,7 @@ export default function CollectionPage() {
           className="btn btn-secondary mobile-filter-toggle"
           onClick={() => setShowFilters((s) => !s)}
         >
-          Filters ☰
+          Filters
         </button>
       </div>
 
