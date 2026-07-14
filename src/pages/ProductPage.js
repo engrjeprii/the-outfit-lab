@@ -63,6 +63,8 @@ function Accordion({ title, children, defaultOpen = false }) {
   );
 }
 
+const SHOW_SHIPPING_RETURNS = false;
+
 export default function ProductPage() {
   const { id } = useParams();
   const { addItem } = useCart();
@@ -404,9 +406,11 @@ export default function ProductPage() {
                 </ul>
               </Accordion>
             )}
-            <Accordion title="Shipping & Returns">
-              <p>Free shipping on orders over ₱2,000. Easy 30-day returns on unused items.</p>
-            </Accordion>
+            {SHOW_SHIPPING_RETURNS && (
+              <Accordion title="Shipping & Returns">
+                <p>Free shipping on orders over ₱2,000. Easy 30-day returns on unused items.</p>
+              </Accordion>
+            )}
           </div>
         </div>
       </div>
