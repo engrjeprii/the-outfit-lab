@@ -610,7 +610,7 @@ input, select, textarea {
 
   .product-gallery {
     flex: 1 1 50%;
-    max-width: 600px;
+    max-width: 480px;
     min-width: 0;
   }
 
