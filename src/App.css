@@ -3616,20 +3616,20 @@ body::-webkit-scrollbar,
 }
 
 .reviews-carousel-track .review-card {
-  flex: 0 0 100%;
-  margin: 0;
+  flex: 0 0 calc(100% - 2%);
+  margin: 0 1%;
   min-height: 16rem;
 }
 
 @media (min-width: 640px) {
   .reviews-carousel-track .review-card {
-    flex: 0 0 50%;
+    flex: 0 0 calc(50% - 2%);
   }
 }
 
 @media (min-width: 1024px) {
   .reviews-carousel-track .review-card {
-    flex: 0 0 33.333%;
+    flex: 0 0 calc(33.333% - 2%);
   }
 }
 
