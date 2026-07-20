@@ -79,23 +79,21 @@ function useFadeUp() {
 export default function CustomerReviews() {
   const [reviews, setReviews] = useState([]);
   const [summary, setSummary] = useState({ count: 0, average: 0 });
-  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ rating: 0, comment: "", reviewer_name: "" });
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [sectionRef, sectionVisible] = useFadeUp();
+  const trackRef = useRef(null);
+  const touchStartX = useRef(null);
 
-  const loadData = useCallback(async () => {
+  const loadReviews = useCallback(async () => {
     setLoading(true);
     try {
-      const [reviewsData, productsData] = await Promise.all([
-        api.getReviews(),
-        api.getProducts({ limit: 6 }),
-      ]);
-      setReviews(reviewsData.reviews || []);
-      setSummary(reviewsData.summary || { count: 0, average: 0 });
-      setProducts((productsData.products || []).slice(0, 6));
+      const data = await api.getReviews();
+      setReviews(data.reviews || []);
+      setSummary(data.summary || { count: 0, average: 0 });
     } catch (err) {
       // Non-critical section
     } finally {
@@ -104,8 +102,29 @@ export default function CustomerReviews() {
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadReviews();
+  }, [loadReviews]);
+
+  const goTo = (idx) => {
+    setCurrentIndex(Math.max(0, Math.min(idx, reviews.length - 1)));
+  };
+
+  const prev = () => goTo(currentIndex - 1);
+  const next = () => goTo(currentIndex + 1);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.changedTouches[0].screenX;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const endX = e.changedTouches[0].screenX;
+    const diff = touchStartX.current - endX;
+    if (Math.abs(diff) > 40) {
+      diff > 0 ? next() : prev();
+    }
+    touchStartX.current = null;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -131,7 +150,8 @@ export default function CustomerReviews() {
       });
       setMessage("Thanks! Your review is pending moderation.");
       setForm({ rating: 0, comment: "", reviewer_name: "" });
-      loadData();
+      loadReviews();
+      setCurrentIndex(0);
     } catch (err) {
       setMessage(err.message || "Failed to submit review.");
     } finally {
@@ -165,7 +185,9 @@ export default function CustomerReviews() {
           </div>
           <div className="review-stat-card">
             <span className="review-stat-icon">👕</span>
-            <span className="review-stat-value">{displayCount > 0 ? `${displayCount.toLocaleString()}+` : "10,000+"}</span>
+            <span className="review-stat-value">
+              {displayCount > 0 ? `${displayCount.toLocaleString()}+` : "10,000+"}
+            </span>
             <span className="review-stat-label">Happy Customers</span>
           </div>
           <div className="review-stat-card">
@@ -180,64 +202,79 @@ export default function CustomerReviews() {
         ) : reviews.length === 0 ? (
           <p className="reviews-empty">No reviews yet. Be the first to share your experience.</p>
         ) : (
-          <div className="reviews-grid" role="list">
-            {reviews.map((review, idx) => (
-              <article
-                key={review.id}
-                className="review-card fade-up"
-                style={{ transitionDelay: `${idx * 0.08}s` }}
-                role="listitem"
+          <div className="reviews-carousel fade-up" aria-roledescription="carousel" aria-label="Customer reviews">
+            <button
+              type="button"
+              className="carousel-arrow carousel-arrow-prev"
+              onClick={prev}
+              disabled={currentIndex === 0}
+              aria-label="Previous review"
+            >
+              ‹
+            </button>
+
+            <div
+              className="reviews-carousel-viewport"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div
+                ref={trackRef}
+                className="reviews-carousel-track"
+                style={{ transform: `translateX(-${currentIndex * 100}%)` }}
               >
-                <StarRating rating={review.rating} />
-                <blockquote className="review-quote">{review.comment}</blockquote>
-                <div className="review-author-row">
-                  <Avatar name={review.reviewer_name} />
-                  <div>
-                    <p className="review-author-name">{review.reviewer_name}</p>
-                    <span className="review-verified">Verified Purchase</span>
-                  </div>
-                </div>
-                {(review.product_name || review.created_at) && (
-                  <div className="review-meta">
-                    {review.product_name && (
-                      <span className="review-purchased">Purchased: {review.product_name}</span>
+                {reviews.map((review) => (
+                  <article key={review.id} className="review-card" role="group" aria-roledescription="slide">
+                    <StarRating rating={review.rating} />
+                    <blockquote className="review-quote">{review.comment}</blockquote>
+                    <div className="review-author-row">
+                      <Avatar name={review.reviewer_name} />
+                      <div>
+                        <p className="review-author-name">{review.reviewer_name}</p>
+                        <span className="review-verified">Verified Purchase</span>
+                      </div>
+                    </div>
+                    {(review.product_name || review.created_at) && (
+                      <div className="review-meta">
+                        {review.product_name && (
+                          <span className="review-purchased">Purchased: {review.product_name}</span>
+                        )}
+                        {review.created_at && (
+                          <span className="review-date">{formatDate(review.created_at)}</span>
+                        )}
+                      </div>
                     )}
-                    {review.created_at && (
-                      <span className="review-date">{formatDate(review.created_at)}</span>
-                    )}
-                  </div>
-                )}
-              </article>
-            ))}
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="carousel-arrow carousel-arrow-next"
+              onClick={next}
+              disabled={currentIndex === reviews.length - 1}
+              aria-label="Next review"
+            >
+              ›
+            </button>
           </div>
         )}
 
-        <div className="community-gallery fade-up">
-          <h3>Styled by Our Community</h3>
-          {products.length > 0 ? (
-            <div className="community-grid">
-              {products.map((product) => (
-                <Link
-                  key={product.id}
-                  to={`/products/${product.id}`}
-                  className="community-item"
-                  aria-label={`Shop this look: ${product.name}`}
-                >
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    loading="lazy"
-                  />
-                  <div className="community-overlay">
-                    <span className="btn btn-secondary btn-small">Shop this look</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="reviews-empty">Community photos coming soon.</p>
-          )}
-        </div>
+        {reviews.length > 1 && (
+          <div className="reviews-carousel-dots fade-up">
+            {reviews.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                className={`carousel-dot ${idx === currentIndex ? "active" : ""}`}
+                onClick={() => goTo(idx)}
+                aria-label={`Go to review ${idx + 1}`}
+                aria-current={idx === currentIndex ? "true" : undefined}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="reviews-cta fade-up">
           <p className="reviews-cta-heading">Join thousands of happy customers.</p>
@@ -245,9 +282,16 @@ export default function CustomerReviews() {
             <Link to="/shop" className="btn btn-primary btn-large">
               Shop Collection
             </Link>
-            <a href="#reviews-heading" className="reviews-link">
+            <button
+              type="button"
+              className="reviews-link"
+              onClick={() => {
+                const formEl = document.querySelector(".review-form-premium");
+                formEl?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
               Read More Reviews
-            </a>
+            </button>
           </div>
         </div>
 
