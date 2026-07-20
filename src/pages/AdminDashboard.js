@@ -14,7 +14,7 @@ const SHIRT_SIZE_OPTIONS = {
 };
 
 function isShirtCategory(category) {
-  return category?.id === "cat-shirts";
+  return category?.size_schema?.length === 1 && category.size_schema[0] === "alpha";
 }
 
 function shirtSizeValue(sizeKey) {
