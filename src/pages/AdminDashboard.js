@@ -7,6 +7,21 @@ import Modal from "../components/Modal";
 import { formatPrice } from "../components/ProductCard";
 import { displaySize } from "../components/SizeColorSelector";
 
+const SHIRT_SIZE_OPTIONS = {
+  women: ["06", "08", "10", "12", "14"],
+  men: ["Small", "Medium", "Large", "XLarge", "2XLarge", "1XB", "2XB", "3XB", "4XB"],
+  unisex: ["Small", "Medium", "Large", "XL"],
+};
+
+function isShirtCategory(category) {
+  return category?.id === "cat-shirts";
+}
+
+function shirtSizeValue(sizeKey) {
+  if (!sizeKey) return "";
+  return sizeKey.split(":").pop();
+}
+
 function CloseIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -98,6 +113,9 @@ function parseSizeKey(sizeKey) {
 }
 
 function emptyVariantRow(category) {
+  if (isShirtCategory(category)) {
+    return { gender: "men", colorway: "", sizeStocks: {} };
+  }
   const row = { gender: "men", colorway: "", stock_qty: "" };
   (category?.size_schema || []).forEach((k) => {
     row[k] = "";
@@ -110,6 +128,26 @@ function emptyVariantRow(category) {
 }
 
 function variantRowsFromProduct(product, category) {
+  if (isShirtCategory(category)) {
+    if (!product?.variants || product.variants.length === 0) {
+      return [emptyVariantRow(category)];
+    }
+    const groups = {};
+    product.variants.forEach((v) => {
+      const gender = v.gender || product.gender || "men";
+      const colorway = v.colorway === "Default" ? "" : v.colorway || "";
+      const key = `${gender}::${colorway}`;
+      if (!groups[key]) {
+        groups[key] = { id: v.id, gender, colorway, sizeStocks: {} };
+      }
+      const sizeValue = shirtSizeValue(v.size_key);
+      if (sizeValue) {
+        groups[key].sizeStocks[sizeValue] = v.stock_qty ?? "";
+      }
+    });
+    return Object.values(groups);
+  }
+
   if (!product?.variants || product.variants.length === 0) {
     return [emptyVariantRow(category)];
   }
@@ -131,6 +169,14 @@ function variantRowsFromProduct(product, category) {
 }
 
 function sizeChartFromRows(rows, category) {
+  if (isShirtCategory(category)) {
+    const sizes = new Set();
+    rows.forEach((row) => {
+      Object.keys(row.sizeStocks || {}).forEach((s) => sizes.add(s));
+    });
+    return Array.from(sizes).map((s) => ({ size: s }));
+  }
+
   if (!category) return [];
   const seen = new Set();
   const chart = [];
@@ -803,7 +849,31 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
 
   const updateVariantRow = (idx, key, value) => {
     const next = [...variantRows];
-    next[idx] = { ...next[idx], [key]: value };
+    if (key === "gender" && isShirtCategory(category)) {
+      next[idx] = { ...next[idx], gender: value, sizeStocks: {} };
+    } else {
+      next[idx] = { ...next[idx], [key]: value };
+    }
+    setVariantRows(next);
+  };
+
+  const toggleShirtSize = (idx, size) => {
+    const next = [...variantRows];
+    const row = next[idx];
+    const sizeStocks = { ...row.sizeStocks };
+    if (size in sizeStocks) {
+      delete sizeStocks[size];
+    } else {
+      sizeStocks[size] = "";
+    }
+    next[idx] = { ...row, sizeStocks };
+    setVariantRows(next);
+  };
+
+  const setShirtSizeStock = (idx, size, stock) => {
+    const next = [...variantRows];
+    const row = next[idx];
+    next[idx] = { ...row, sizeStocks: { ...row.sizeStocks, [size]: stock } };
     setVariantRows(next);
   };
 
@@ -896,36 +966,89 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       return;
     }
 
-    // Ignore variant rows that are completely empty (no colorway, no stock).
-    const nonEmptyRows = variantRows.filter((row) => {
-      const hasColorway = row.colorway && row.colorway.trim();
-      const hasStock = row.stock_qty && parseInt(row.stock_qty, 10) > 0;
-      return hasColorway || hasStock;
-    });
+    // Validate and build variants.
+    let validRows = [];
+    let variants = [];
 
-    const validRows = [];
-    for (let i = 0; i < nonEmptyRows.length; i++) {
-      const row = nonEmptyRows[i];
-      if (!row.gender) {
-        setError(`Gender is required for variant ${i + 1}.`);
-        return;
-      }
-      for (const k of category.size_schema) {
-        if (!row[k]) {
-          setError(`${k} is required for variant ${i + 1}.`);
+    if (isShirtCategory(category)) {
+      const nonEmptyRows = variantRows.filter(
+        (row) => row.colorway && row.colorway.trim() && Object.keys(row.sizeStocks || {}).length > 0
+      );
+
+      for (let i = 0; i < nonEmptyRows.length; i++) {
+        const row = nonEmptyRows[i];
+        if (!row.gender) {
+          setError(`Gender is required for variant ${i + 1}.`);
           return;
         }
+        if (!row.colorway || !row.colorway.trim()) {
+          setError(`Colorway is required for variant ${i + 1}.`);
+          return;
+        }
+        const selectedSizes = Object.entries(row.sizeStocks).filter(([size, qty]) => {
+          const stock = parseInt(qty, 10);
+          return !Number.isNaN(stock) && stock > 0;
+        });
+        if (selectedSizes.length === 0) {
+          setError(`Select at least one size with stock for variant ${i + 1}.`);
+          return;
+        }
+        validRows.push(row);
+        for (const [size, qty] of selectedSizes) {
+          variants.push({
+            gender: row.gender,
+            size_key: `size:${size}`,
+            colorway: row.colorway.trim(),
+            stock_qty: parseInt(qty, 10),
+            sold_out: false,
+          });
+        }
       }
-      if (!row.colorway || !row.colorway.trim()) {
-        setError(`Colorway is required for variant ${i + 1}.`);
-        return;
+    } else {
+      // Ignore variant rows that are completely empty (no colorway, no stock).
+      const nonEmptyRows = variantRows.filter((row) => {
+        const hasColorway = row.colorway && row.colorway.trim();
+        const hasStock = row.stock_qty && parseInt(row.stock_qty, 10) > 0;
+        return hasColorway || hasStock;
+      });
+
+      for (let i = 0; i < nonEmptyRows.length; i++) {
+        const row = nonEmptyRows[i];
+        if (!row.gender) {
+          setError(`Gender is required for variant ${i + 1}.`);
+          return;
+        }
+        for (const k of category.size_schema) {
+          if (!row[k]) {
+            setError(`${k} is required for variant ${i + 1}.`);
+            return;
+          }
+        }
+        if (!row.colorway || !row.colorway.trim()) {
+          setError(`Colorway is required for variant ${i + 1}.`);
+          return;
+        }
+        const stock = parseInt(row.stock_qty, 10);
+        if (Number.isNaN(stock) || stock <= 0) {
+          setError(`Stock must be greater than 0 for variant ${i + 1}.`);
+          return;
+        }
+        validRows.push(row);
       }
-      const stock = parseInt(row.stock_qty, 10);
-      if (Number.isNaN(stock) || stock <= 0) {
-        setError(`Stock must be greater than 0 for variant ${i + 1}.`);
-        return;
-      }
-      validRows.push(row);
+
+      variants = validRows.map((row) => {
+        const sizeFields = {};
+        for (const k of category.size_schema) {
+          sizeFields[k] = row[k];
+        }
+        return {
+          size_key: sizeKeyFromRow(sizeFields),
+          colorway: row.colorway.trim(),
+          gender: row.gender,
+          stock_qty: parseInt(row.stock_qty, 10) || 0,
+          sold_out: false,
+        };
+      });
     }
 
     if (validRows.length === 0) {
@@ -942,20 +1065,6 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
 
     const genders = [...new Set(validRows.map((r) => r.gender))];
     const productGender = genders.length === 1 ? genders[0] : "unisex";
-
-    const variants = validRows.map((row) => {
-      const sizeFields = {};
-      for (const k of category.size_schema) {
-        sizeFields[k] = row[k];
-      }
-      return {
-        size_key: sizeKeyFromRow(sizeFields),
-        colorway: row.colorway.trim(),
-        gender: row.gender,
-        stock_qty: parseInt(row.stock_qty, 10) || 0,
-        sold_out: false,
-      };
-    });
 
     setSaving(true);
 
@@ -1043,47 +1152,110 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
 
       <h4>Variants *</h4>
       {category && variantRows.map((row, idx) => (
-        <div key={idx} className="variant-row unified-variant-row">
-          <SortSelect
-            label=""
-            options={[
-              { value: "men", label: "Men" },
-              { value: "women", label: "Women" },
-              { value: "unisex", label: "Unisex" },
-            ]}
-            value={row.gender || "men"}
-            onChange={(value) => updateVariantRow(idx, "gender", value)}
-            required
-          />
-          {category.size_schema.length > 1 && category.size_schema.map((k) => (
-            <input
-              key={k}
-              placeholder={`${k.toUpperCase()} *`}
-              value={row[k] || ""}
-              onChange={(e) => updateVariantRow(idx, k, e.target.value)}
-              required
-            />
-          ))}
-          {category.size_schema.length === 1 && (
-            <span className="variant-size-auto">One Size</span>
+        <div key={idx} className={`variant-row unified-variant-row ${isShirtCategory(category) ? "shirt-variant-row" : ""}`}>
+          {isShirtCategory(category) ? (
+            <>
+              <div className="shirt-variant-header">
+                <SortSelect
+                  label=""
+                  options={[
+                    { value: "men", label: "Men" },
+                    { value: "women", label: "Women" },
+                    { value: "unisex", label: "Unisex" },
+                  ]}
+                  value={row.gender || "men"}
+                  onChange={(value) => updateVariantRow(idx, "gender", value)}
+                  required
+                />
+                <input
+                  placeholder="Color *"
+                  value={row.colorway || ""}
+                  onChange={(e) => updateVariantRow(idx, "colorway", e.target.value)}
+                  required
+                />
+                <button type="button" className="btn btn-danger" onClick={() => removeVariantRow(idx)}>
+                  Remove
+                </button>
+              </div>
+              <div className="shirt-size-chips">
+                {[
+                  ...(SHIRT_SIZE_OPTIONS[row.gender] || SHIRT_SIZE_OPTIONS.men),
+                  ...Object.keys(row.sizeStocks || {}).filter(
+                    (s) => !(SHIRT_SIZE_OPTIONS[row.gender] || []).includes(s)
+                  ),
+                ].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    className={`size-chip ${row.sizeStocks && size in row.sizeStocks ? "active" : ""}`}
+                    onClick={() => toggleShirtSize(idx, size)}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+              {Object.keys(row.sizeStocks || {}).length > 0 && (
+                <div className="shirt-size-stocks">
+                  {Object.keys(row.sizeStocks).map((size) => (
+                    <label key={size} className="shirt-stock-input">
+                      <span>{size}</span>
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="Stock"
+                        value={row.sizeStocks[size]}
+                        onChange={(e) => setShirtSizeStock(idx, size, e.target.value)}
+                        required
+                      />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <SortSelect
+                label=""
+                options={[
+                  { value: "men", label: "Men" },
+                  { value: "women", label: "Women" },
+                  { value: "unisex", label: "Unisex" },
+                ]}
+                value={row.gender || "men"}
+                onChange={(value) => updateVariantRow(idx, "gender", value)}
+                required
+              />
+              {category.size_schema.length > 1 && category.size_schema.map((k) => (
+                <input
+                  key={k}
+                  placeholder={`${k.toUpperCase()} *`}
+                  value={row[k] || ""}
+                  onChange={(e) => updateVariantRow(idx, k, e.target.value)}
+                  required
+                />
+              ))}
+              {category.size_schema.length === 1 && (
+                <span className="variant-size-auto">One Size</span>
+              )}
+              <input
+                placeholder="Color *"
+                value={row.colorway || ""}
+                onChange={(e) => updateVariantRow(idx, "colorway", e.target.value)}
+                required
+              />
+              <input
+                type="number"
+                min={1}
+                placeholder="Stock *"
+                value={row.stock_qty}
+                onChange={(e) => updateVariantRow(idx, "stock_qty", e.target.value)}
+                required
+              />
+              <button type="button" className="btn btn-danger" onClick={() => removeVariantRow(idx)}>
+                Remove
+              </button>
+            </>
           )}
-          <input
-            placeholder="Color *"
-            value={row.colorway || ""}
-            onChange={(e) => updateVariantRow(idx, "colorway", e.target.value)}
-            required
-          />
-          <input
-            type="number"
-            min={1}
-            placeholder="Stock *"
-            value={row.stock_qty}
-            onChange={(e) => updateVariantRow(idx, "stock_qty", e.target.value)}
-            required
-          />
-          <button type="button" className="btn btn-danger" onClick={() => removeVariantRow(idx)}>
-            Remove
-          </button>
         </div>
       ))}
       {!category && <p>Select a category to add variants.</p>}
