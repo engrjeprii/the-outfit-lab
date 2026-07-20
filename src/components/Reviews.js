@@ -46,7 +46,9 @@ export default function Reviews({ productId }) {
 
   const loadReviews = useCallback(async () => {
     try {
-      const data = await api.getProductReviews(productId);
+      const data = productId
+        ? await api.getProductReviews(productId)
+        : await api.getReviews();
       setReviews(data.reviews || []);
       setSummary(data.summary || { count: 0, average: 0 });
     } catch (err) {
@@ -77,11 +79,16 @@ export default function Reviews({ productId }) {
     }
     setSubmitting(true);
     try {
-      await api.submitReview(productId, {
+      const review = {
         rating: form.rating,
         comment: form.comment.trim(),
         reviewer_name: form.reviewer_name.trim(),
-      });
+      };
+      if (productId) {
+        await api.submitReview(productId, review);
+      } else {
+        await api.submitShopReview(review);
+      }
       setMessage("Thanks! Your review is pending moderation.");
       setForm({ rating: 0, comment: "", reviewer_name: "" });
       loadReviews();
@@ -94,7 +101,7 @@ export default function Reviews({ productId }) {
 
   return (
     <div className="reviews-section">
-      <h3>Reviews</h3>
+      <h3>{productId ? "Reviews" : "Customer Reviews"}</h3>
 
       {summary.count > 0 && (
         <div className="reviews-summary">

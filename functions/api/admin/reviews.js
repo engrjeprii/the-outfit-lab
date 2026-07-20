@@ -24,7 +24,7 @@ export async function onRequestGet(context) {
     `SELECT r.id, r.product_id, r.rating, r.comment, r.reviewer_name, r.status, r.created_at,
             p.name as product_name, p.sku as product_sku
      FROM reviews r
-     JOIN products p ON p.id = r.product_id
+     LEFT JOIN products p ON p.id = r.product_id
      WHERE r.status = ?
      ORDER BY r.created_at DESC`
   )

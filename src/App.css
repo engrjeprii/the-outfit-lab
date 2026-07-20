@@ -3404,10 +3404,17 @@ body::-webkit-scrollbar,
   color: var(--text-muted);
 }
 
-.review-card-actions {
-  display: flex;
-  gap: var(--space-sm);
-  margin-top: var(--space-md);
+.home-reviews {
+  padding: var(--space-xl) var(--space-md);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.home-reviews .reviews-section {
+  max-width: 800px;
+  margin: 0 auto;
+  border-top: none;
+  padding-top: 0;
 }
 
 .home-link:hover {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import Reviews from "../components/Reviews";
 
 function AuthenticityIcon() {
   return (
@@ -122,6 +123,9 @@ export default function HomePage() {
             ))}
           </div>
         )}
+      </section>
+      <section className="home-reviews">
+        <Reviews />
       </section>
     </div>
   );

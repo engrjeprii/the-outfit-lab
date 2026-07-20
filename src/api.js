@@ -509,6 +509,21 @@ const mockApi = {
     };
   },
 
+  getReviews: async () => {
+    await delay();
+    return { reviews: [], summary: { count: 0, average: 0 } };
+  },
+
+  submitShopReview: async (review) => {
+    await delay();
+    return {
+      id: generateId(),
+      rating: review.rating,
+      status: "pending",
+      created_at: new Date().toISOString(),
+    };
+  },
+
   getOrder: async (id) => {
     await delay();
     const order = orders[id];
@@ -989,6 +1004,18 @@ const realApi = {
 
   submitReview: async (id, review) => {
     return apiRequest(`/products/${encodeURIComponent(id)}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(review),
+    });
+  },
+
+  getReviews: async () => {
+    return apiRequest("/reviews");
+  },
+
+  submitShopReview: async (review) => {
+    return apiRequest("/reviews", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(review),
