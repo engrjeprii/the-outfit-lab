@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useCart } from "../cart";
 import { Price } from "../components/ProductCard";
+import Reviews from "../components/Reviews";
 import { displaySize } from "../components/SizeColorSelector";
 
 function shoeSizeKey(row) {
@@ -412,6 +413,8 @@ export default function ProductPage() {
               </Accordion>
             )}
           </div>
+
+          <Reviews productId={id} />
         </div>
       </div>
     </React.Fragment>

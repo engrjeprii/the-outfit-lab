@@ -249,6 +249,9 @@ export default function AdminDashboard() {
         <button className={tab === "reports" ? "active" : ""} onClick={() => setTab("reports")}>
           Reports
         </button>
+        <button className={tab === "reviews" ? "active" : ""} onClick={() => setTab("reviews")}>
+          Reviews
+        </button>
       </div>
 
       {tab === "products" && <ProductManager categories={categories} />}
@@ -257,6 +260,7 @@ export default function AdminDashboard() {
       )}
       {tab === "orders" && <OrderManager />}
       {tab === "reports" && <ReportsManager />}
+      {tab === "reviews" && <ReviewManager />}
     </div>
   );
 }
@@ -1919,6 +1923,104 @@ function ReportsManager() {
             </div>
           </div>
         </Modal>
+      )}
+    </div>
+  );
+}
+
+function ReviewManager() {
+  const [status, setStatus] = useState("pending");
+  const [reviews, setReviews] = useState([]);
+  const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api.listReviews(status);
+      setReviews(data.reviews || []);
+      setCounts(data.counts || { pending: 0, approved: 0, rejected: 0 });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleStatus = async (id, newStatus) => {
+    try {
+      await api.updateReviewStatus(id, newStatus);
+      load();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this review permanently?")) return;
+    try {
+      await api.deleteReview(id);
+      load();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  if (loading) return <div className="page-status">Loading...</div>;
+  if (error) return <div className="page-status error">{error}</div>;
+
+  return (
+    <div className="review-manager">
+      <div className="review-status-tabs">
+        {["pending", "approved", "rejected"].map((s) => (
+          <button
+            key={s}
+            className={status === s ? "active" : ""}
+            onClick={() => setStatus(s)}
+          >
+            {s.charAt(0).toUpperCase() + s.slice(1)} ({counts[s] || 0})
+          </button>
+        ))}
+      </div>
+
+      {reviews.length === 0 ? (
+        <p className="page-status">No {status} reviews.</p>
+      ) : (
+        <div className="review-list-admin">
+          {reviews.map((review) => (
+            <div key={review.id} className="review-card-admin">
+              <div className="review-card-header">
+                <div>
+                  <strong>{review.reviewer_name}</strong>
+                  <span className="review-rating">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</span>
+                </div>
+                <span className="review-product">{review.product_name}</span>
+              </div>
+              <p className="review-comment">{review.comment}</p>
+              <div className="review-card-actions">
+                {status !== "approved" && (
+                  <button className="btn btn-primary" onClick={() => handleStatus(review.id, "approved")}>
+                    Approve
+                  </button>
+                )}
+                {status !== "rejected" && (
+                  <button className="btn btn-secondary" onClick={() => handleStatus(review.id, "rejected")}>
+                    Reject
+                  </button>
+                )}
+                <button className="btn btn-danger" onClick={() => handleDelete(review.id)}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

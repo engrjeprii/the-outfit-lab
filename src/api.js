@@ -493,6 +493,22 @@ const mockApi = {
     return { ...order, message: buildOrderMessage(order) };
   },
 
+  getProductReviews: async () => {
+    await delay();
+    return { reviews: [], summary: { count: 0, average: 0 } };
+  },
+
+  submitReview: async (productId, review) => {
+    await delay();
+    return {
+      id: generateId(),
+      product_id: productId,
+      rating: review.rating,
+      status: "pending",
+      created_at: new Date().toISOString(),
+    };
+  },
+
   getOrder: async (id) => {
     await delay();
     const order = orders[id];
@@ -769,6 +785,30 @@ const mockApi = {
     return { id, shipping_status, tracking_number: order.tracking_number };
   },
 
+  listReviews: async (status = "pending") => {
+    await delay();
+    if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
+      throw new Error("Unauthorized");
+    }
+    return { reviews: [], counts: { pending: 0, approved: 0, rejected: 0 } };
+  },
+
+  updateReviewStatus: async (id, status) => {
+    await delay();
+    if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
+      throw new Error("Unauthorized");
+    }
+    return { id, status };
+  },
+
+  deleteReview: async (id) => {
+    await delay();
+    if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
+      throw new Error("Unauthorized");
+    }
+    return { id, deleted: true };
+  },
+
   uploadImage: async (file) => {
     await delay();
     if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
@@ -940,6 +980,36 @@ const realApi = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ shipping_status, tracking_number }),
+    });
+  },
+
+  getProductReviews: async (id) => {
+    return apiRequest(`/products/${encodeURIComponent(id)}/reviews`);
+  },
+
+  submitReview: async (id, review) => {
+    return apiRequest(`/products/${encodeURIComponent(id)}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(review),
+    });
+  },
+
+  listReviews: async (status = "pending") => {
+    return apiRequest(`/admin/reviews?status=${encodeURIComponent(status)}`);
+  },
+
+  updateReviewStatus: async (id, status) => {
+    return apiRequest("/admin/reviews", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
+  },
+
+  deleteReview: async (id) => {
+    return apiRequest(`/admin/reviews?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
     });
   },
 
