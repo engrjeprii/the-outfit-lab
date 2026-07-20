@@ -13,7 +13,13 @@ export async function onRequestGet(context) {
   const { env } = context;
 
   const { results: reviews } = await env.DB.prepare(
-    "SELECT id, product_id, rating, comment, reviewer_name, status, created_at FROM reviews WHERE status = 'approved' ORDER BY created_at DESC LIMIT 100"
+    `SELECT r.id, r.product_id, r.rating, r.comment, r.reviewer_name, r.status, r.created_at,
+            p.name as product_name
+     FROM reviews r
+     LEFT JOIN products p ON p.id = r.product_id
+     WHERE r.status = 'approved'
+     ORDER BY r.created_at DESC
+     LIMIT 100`
   ).all();
 
   const summary = await env.DB.prepare(
