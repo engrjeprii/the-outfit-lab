@@ -433,6 +433,7 @@ function ProductManager({ categories }) {
           result.activated ? "\nProduct is now active in the shop." : ""
         }${errorDetails ? "\n\n" + errorDetails : ""}`
       );
+      refreshProducts();
     } catch (err) {
       alert(err.message);
     } finally {
