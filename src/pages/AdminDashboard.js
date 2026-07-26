@@ -427,7 +427,12 @@ function ProductManager({ categories }) {
     setNotifyLoading(productId);
     try {
       const result = await api.notifyWaitlist(productId);
-      alert(`Notifications sent: ${result.sent}\nFailed: ${result.failed}`);
+      const errorDetails = result.errors?.map((e) => `${e.email}: ${e.error}`).join("\n") || "";
+      alert(
+        `Notifications sent: ${result.sent}\nFailed: ${result.failed}${
+          errorDetails ? "\n\n" + errorDetails : ""
+        }`
+      );
     } catch (err) {
       alert(err.message);
     } finally {
