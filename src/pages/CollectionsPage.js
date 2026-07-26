@@ -44,7 +44,7 @@ export default function CollectionsPage() {
         {brands.map((brand) => (
           <Link
             key={brand.name}
-            to={`/?brand=${encodeURIComponent(brand.name)}`}
+            to={`/shop?brand=${encodeURIComponent(brand.name)}`}
             className="collection-card"
           >
             <div className="collection-card-image">
