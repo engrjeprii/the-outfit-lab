@@ -33,6 +33,7 @@ export async function onRequestPost(context) {
     category_id,
     brand,
     gender = "unisex",
+    is_upcoming,
     images = [],
     videos = [],
     details = {},
@@ -45,6 +46,7 @@ export async function onRequestPost(context) {
   }
 
   const normalizedGender = ["men", "women", "unisex"].includes(gender) ? gender : "unisex";
+  const isUpcoming = is_upcoming ? 1 : 0;
   const now = new Date().toISOString();
   const retailPrice = retail_price ? parseInt(retail_price, 10) : 0;
 
@@ -120,7 +122,7 @@ export async function onRequestPost(context) {
   if (existing) {
     productId = existing.id;
     await env.DB.prepare(
-      "UPDATE products SET category_id = ?, brand = ?, gender = ?, name = ?, description = ?, price = ?, retail_price = ?, images = ?, videos = ?, details = ?, size_chart = ? WHERE id = ?"
+      "UPDATE products SET category_id = ?, brand = ?, gender = ?, name = ?, description = ?, price = ?, retail_price = ?, images = ?, videos = ?, details = ?, size_chart = ?, is_upcoming = ? WHERE id = ?"
     )
       .bind(
         category_id,
@@ -134,13 +136,14 @@ export async function onRequestPost(context) {
         JSON.stringify(videos),
         JSON.stringify(details),
         JSON.stringify(filledSizeChart),
+        isUpcoming,
         productId
       )
       .run();
   } else {
     productId = generateId();
     await env.DB.prepare(
-      "INSERT INTO products (id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO products (id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, is_upcoming, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         productId,
@@ -156,6 +159,7 @@ export async function onRequestPost(context) {
         JSON.stringify(videos),
         JSON.stringify(details),
         JSON.stringify(filledSizeChart),
+        isUpcoming,
         now
       )
       .run();

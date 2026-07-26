@@ -77,6 +77,9 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistStatus, setWaitlistStatus] = useState("idle");
+  const [waitlistMessage, setWaitlistMessage] = useState("");
 
   const isShoes = product?.category_id === "cat-shoes";
 
@@ -187,6 +190,25 @@ export default function ProductPage() {
     setTimeout(() => setAdded(false), 3000);
   };
 
+  const handleJoinWaitlist = async (e) => {
+    e.preventDefault();
+    setWaitlistStatus("submitting");
+    setWaitlistMessage("");
+    try {
+      const result = await api.joinWaitlist(product.id, waitlistEmail);
+      if (result.alreadyJoined) {
+        setWaitlistMessage("You're already on the list. We'll email you when it's available.");
+      } else {
+        setWaitlistMessage("You're on the list. We'll email you when it drops.");
+      }
+      setWaitlistEmail("");
+    } catch (err) {
+      setWaitlistMessage(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setWaitlistStatus("idle");
+    }
+  };
+
   const images = product.images || [];
   const videos = product.videos || [];
   const mediaItems = [];
@@ -275,7 +297,35 @@ export default function ProductPage() {
           </p>
           <p className="product-description">{product.description}</p>
 
-          {isShoes && shoeGenders.length > 0 && (
+          {product.is_upcoming ? (
+            <div className="product-upcoming-notify">
+              <span className="upcoming-badge-large">Coming Soon</span>
+              <p>Be the first to know when this drops.</p>
+              <form onSubmit={handleJoinWaitlist}>
+                <label htmlFor="waitlist-email">Email</label>
+                <div className="notify-form-row">
+                  <input
+                    id="waitlist-email"
+                    type="email"
+                    value={waitlistEmail}
+                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={waitlistStatus === "submitting"}
+                  >
+                    {waitlistStatus === "submitting" ? "..." : "Notify Me"}
+                  </button>
+                </div>
+                {waitlistMessage && <p className="notify-message">{waitlistMessage}</p>}
+              </form>
+            </div>
+          ) : (
+            <>
+              {isShoes && shoeGenders.length > 0 && (
             <div className="selector-group">
               <label>Gender Fit</label>
               <div className="selector-options">
@@ -394,6 +444,8 @@ export default function ProductPage() {
               <p>Added to cart.</p>
               <Link to="/cart" className="btn btn-secondary">View Cart</Link>
             </div>
+          )}
+          </>
           )}
 
           <div className="accordion-list">

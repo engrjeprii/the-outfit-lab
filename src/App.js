@@ -11,6 +11,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import CollectionsPage from "./pages/CollectionsPage";
+import ComingSoonPage from "./pages/ComingSoonPage";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/shop" element={<CollectionPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
+            <Route path="/coming-soon" element={<ComingSoonPage />} />
             <Route path="/products/:id" element={<ProductPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />

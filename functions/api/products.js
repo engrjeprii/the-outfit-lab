@@ -39,9 +39,18 @@ export async function onRequestGet(context) {
   const size = url.searchParams.get("size");
   const colorway = url.searchParams.get("colorway");
   const sort = url.searchParams.get("sort") || "newest";
+  const upcoming = url.searchParams.get("upcoming");
+
+  const isAdmin = verifyAdminToken(request, env);
 
   const whereClauses = ["deleted_at IS NULL"];
   const bindings = [];
+
+  if (upcoming === "true") {
+    whereClauses.push("is_upcoming = 1");
+  } else if (!isAdmin) {
+    whereClauses.push("is_upcoming = 0");
+  }
 
   if (category) {
     whereClauses.push("category_id = ?");
@@ -118,7 +127,7 @@ export async function onRequestGet(context) {
 
   // Fetch page of products.
   const selectSql = `
-    SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, created_at
+    SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, is_upcoming, created_at
     FROM products
     ${where}
     ORDER BY ${orderBy}
@@ -131,7 +140,6 @@ export async function onRequestGet(context) {
   const stockMap = new Map();
   const availableGenderMap = new Map();
   let variantMap = new Map();
-  const isAdmin = verifyAdminToken(request, env);
 
   if (productIds.length > 0) {
     const placeholders = productIds.map(() => "?").join(",");

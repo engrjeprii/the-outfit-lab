@@ -60,6 +60,7 @@ const NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/shop", label: "Shop" },
   { to: "/collections", label: "Collections" },
+  { to: "/coming-soon", label: "Coming Soon" },
   // { to: "/", label: "Sale" },
 ];
 

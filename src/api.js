@@ -223,9 +223,15 @@ function generateMockProducts() {
       },
       size_chart: sizeChart,
       created_at: new Date(Date.now() - idx * 86400000).toISOString(),
+      is_upcoming: false,
       variants,
     });
   });
+
+  // Mark a few mock products as upcoming for local development.
+  if (products[0]) products[0].is_upcoming = true;
+  if (products[3]) products[3].is_upcoming = true;
+
   return products;
 }
 
@@ -346,6 +352,7 @@ const mockApi = {
       maxPrice,
       size,
       colorway,
+      upcoming,
       sort = "newest",
       page = 1,
       limit = 24,
@@ -378,6 +385,12 @@ const mockApi = {
 
     if (category) {
       list = list.filter((p) => p.category_id === category);
+    }
+
+    if (upcoming) {
+      list = list.filter((p) => p.is_upcoming);
+    } else if (!isAdmin) {
+      list = list.filter((p) => !p.is_upcoming);
     }
 
     if (brand) {
@@ -522,6 +535,36 @@ const mockApi = {
       status: "pending",
       created_at: new Date().toISOString(),
     };
+  },
+
+  getUpcomingProducts: async () => {
+    await delay();
+    return mockApi.getProducts({ upcoming: true });
+  },
+
+  joinWaitlist: async (productId, email) => {
+    await delay();
+    return {
+      id: generateId(),
+      product_id: productId,
+      email: email.trim().toLowerCase(),
+      alreadyJoined: false,
+    };
+  },
+
+  getWaitlist: async (productId) => {
+    await delay();
+    return {
+      product: { id: productId, name: "Mock Product" },
+      waitlist: [],
+      total: 0,
+      pending: 0,
+    };
+  },
+
+  notifyWaitlist: async (productId) => {
+    await delay();
+    return { sent: 0, failed: 0, errors: [] };
   },
 
   getOrder: async (id) => {
@@ -1019,6 +1062,28 @@ const realApi = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(review),
+    });
+  },
+
+  getUpcomingProducts: async () => {
+    return apiRequest("/products?upcoming=true");
+  },
+
+  joinWaitlist: async (productId, email) => {
+    return apiRequest("/waitlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: productId, email }),
+    });
+  },
+
+  getWaitlist: async (productId) => {
+    return apiRequest(`/admin/waitlist/${encodeURIComponent(productId)}`);
+  },
+
+  notifyWaitlist: async (productId) => {
+    return apiRequest(`/admin/waitlist/${encodeURIComponent(productId)}`, {
+      method: "POST",
     });
   },
 

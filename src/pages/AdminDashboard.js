@@ -365,6 +365,7 @@ function ProductManager({ categories }) {
   const [filters, setFilters] = useState({
     q: "",
     category: "",
+    status: "",
     sort: "newest",
     page: 1,
     limit: 24,
@@ -382,6 +383,12 @@ function ProductManager({ categories }) {
       setError("");
       try {
         const next = { ...filters, ...overrides };
+        if (next.status === "upcoming") {
+          next.upcoming = true;
+        } else if (next.status === "available") {
+          next.upcoming = false;
+        }
+        delete next.status;
         const data = await api.getProducts(next);
         setResult(data);
         setProducts(data.products);
@@ -403,7 +410,7 @@ function ProductManager({ categories }) {
   };
 
   const handleClearFilters = () => {
-    setFilters({ q: "", category: "", sort: "newest", page: 1, limit: 24 });
+    setFilters({ q: "", category: "", status: "", sort: "newest", page: 1, limit: 24 });
   };
 
   const handlePageChange = (page) => {
@@ -412,6 +419,20 @@ function ProductManager({ categories }) {
 
   const refreshProducts = () => {
     loadProducts();
+  };
+
+  const [notifyLoading, setNotifyLoading] = useState(null);
+
+  const handleNotifyWaitlist = async (productId) => {
+    setNotifyLoading(productId);
+    try {
+      const result = await api.notifyWaitlist(productId);
+      alert(`Notifications sent: ${result.sent}\nFailed: ${result.failed}`);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setNotifyLoading(null);
+    }
   };
 
   const [variantSort, setVariantSort] = useState({});
@@ -495,7 +516,7 @@ function ProductManager({ categories }) {
     }
   };
 
-  const activeFilterCount = [filters.q, filters.category].filter(Boolean).length;
+  const activeFilterCount = [filters.q, filters.category, filters.status].filter(Boolean).length;
 
   const filterFields = (
     <>
@@ -515,6 +536,18 @@ function ProductManager({ categories }) {
           placeholder="All categories"
           options={categories.map((c) => ({ value: c.id, label: c.name }))}
           onChange={(value) => handleFilterChange("category", value)}
+        />
+      </div>
+      <div className="filter-field">
+        <SortSelect
+          label="Status"
+          value={filters.status}
+          placeholder="All products"
+          options={[
+            { value: "available", label: "Available" },
+            { value: "upcoming", label: "Coming Soon" },
+          ]}
+          onChange={(value) => handleFilterChange("status", value)}
         />
       </div>
       <div className="filter-field">
@@ -672,10 +705,22 @@ function ProductManager({ categories }) {
                         <span className="admin-product-meta">
                           {p.sku} · {category?.name || p.category_id} · {formatPrice(p.price)} ·{" "}
                           {p.total_stock || 0} in stock
+                          {p.is_upcoming && <span className="admin-upcoming-badge">Coming Soon</span>}
                         </span>
                       </div>
                     </div>
                     <div className="admin-product-actions" onClick={(e) => e.stopPropagation()}>
+                      {p.is_upcoming && (
+                        <button
+                          className="icon-btn"
+                          onClick={() => handleNotifyWaitlist(p.id)}
+                          disabled={notifyLoading === p.id}
+                          aria-label="Notify waitlist"
+                          title="Notify waitlist"
+                        >
+                          {notifyLoading === p.id ? "..." : "✉"}
+                        </button>
+                      )}
                       <button
                         className="icon-btn"
                         onClick={() => handleEdit(p)}
@@ -794,6 +839,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
   const [care, setCare] = useState(product.details?.care || "");
   const [images, setImages] = useState(product.images || []);
   const [videos, setVideos] = useState(product.videos || []);
+  const [isUpcoming, setIsUpcoming] = useState(product.is_upcoming || false);
   const initialCategory = categories.find((c) => c.id === product.category_id);
   const initialCategoryIdRef = useRef(product.category_id || "");
   const [variantRows, setVariantRows] = useState(() =>
@@ -1086,6 +1132,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       details: { material, fit, care },
       size_chart: sizeChart,
       variants,
+      is_upcoming: isUpcoming,
     };
 
     try {
@@ -1145,6 +1192,15 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         onChange={(e) => setRetailPrice(e.target.value)}
         placeholder="Optional original/MSRP price"
       />
+
+      <label className="checkbox-label">
+        <input
+          type="checkbox"
+          checked={isUpcoming}
+          onChange={(e) => setIsUpcoming(e.target.checked)}
+        />
+        Coming Soon — hide from shop, show on Coming Soon page
+      </label>
 
       <h4>Details *</h4>
       <label>Material *</label>

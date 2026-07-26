@@ -31,17 +31,19 @@ export default function ProductCard({ product }) {
   const inCart = Boolean(cartItem);
   const cartQuantity = cartItem?.quantity || 0;
   const isSoldOut = (product.total_stock || 0) === 0;
+  const isUpcoming = product.is_upcoming;
 
   return (
-    <div className="product-card">
+    <div className={`product-card ${isUpcoming ? "product-card-upcoming" : ""}`}>
       <Link to={`/products/${product.id}`} className="product-image-wrap">
         {image ? (
           <img src={image} alt={product.name} className="product-image" />
         ) : (
           <div className="product-image-placeholder" />
         )}
-        {isSoldOut && <span className="sold-out-badge">Sold out</span>}
-        {!isSoldOut && inCart && <span className="in-cart-badge">In Cart</span>}
+        {isUpcoming && <span className="upcoming-badge">Coming Soon</span>}
+        {!isUpcoming && isSoldOut && <span className="sold-out-badge">Sold out</span>}
+        {!isUpcoming && !isSoldOut && inCart && <span className="in-cart-badge">In Cart</span>}
         {hasVideo && <span className="video-badge" aria-label="Has video">▶</span>}
       </Link>
       <div className="product-info">
