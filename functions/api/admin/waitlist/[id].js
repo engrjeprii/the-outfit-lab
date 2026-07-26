@@ -124,9 +124,15 @@ export async function onRequestPost(context) {
     }
   }
 
+  // Mark product as available now that the waitlist has been notified.
+  await env.DB.prepare("UPDATE products SET is_upcoming = 0 WHERE id = ?")
+    .bind(productId)
+    .run();
+
   return jsonResponse({
     sent,
     failed: errors.length,
+    activated: true,
     errors: errors.slice(0, 10),
   });
 }

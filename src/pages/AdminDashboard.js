@@ -430,8 +430,8 @@ function ProductManager({ categories }) {
       const errorDetails = result.errors?.map((e) => `${e.email}: ${e.error}`).join("\n") || "";
       alert(
         `Notifications sent: ${result.sent}\nFailed: ${result.failed}${
-          errorDetails ? "\n\n" + errorDetails : ""
-        }`
+          result.activated ? "\nProduct is now active in the shop." : ""
+        }${errorDetails ? "\n\n" + errorDetails : ""}`
       );
     } catch (err) {
       alert(err.message);
