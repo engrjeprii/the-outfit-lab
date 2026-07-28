@@ -224,6 +224,7 @@ function generateMockProducts() {
       size_chart: sizeChart,
       created_at: new Date(Date.now() - idx * 86400000).toISOString(),
       is_upcoming: false,
+      available_at: null,
       variants,
     });
   });
@@ -567,6 +568,11 @@ const mockApi = {
     return { sent: 0, failed: 0, errors: [] };
   },
 
+  activateUpcoming: async () => {
+    await delay();
+    return { activated: 0 };
+  },
+
   getOrder: async (id) => {
     await delay();
     const order = orders[id];
@@ -732,6 +738,8 @@ const mockApi = {
       existing.videos = [...(product.videos || [])];
       existing.details = { ...product.details };
       existing.size_chart = product.size_chart.map((row) => ({ ...row }));
+      existing.is_upcoming = product.is_upcoming ? true : false;
+      existing.available_at = product.available_at || null;
 
       // Preserve existing variant IDs for matching gender + size_key + colorway.
       const existingVariantIds = new Map(
@@ -780,6 +788,8 @@ const mockApi = {
       details: { ...product.details },
       size_chart: product.size_chart.map((row) => ({ ...row })),
       created_at: now,
+      is_upcoming: product.is_upcoming ? true : false,
+      available_at: product.available_at || null,
       variants,
     };
     products.push(created);
@@ -1083,6 +1093,12 @@ const realApi = {
 
   notifyWaitlist: async (productId) => {
     return apiRequest(`/admin/waitlist/${encodeURIComponent(productId)}`, {
+      method: "POST",
+    });
+  },
+
+  activateUpcoming: async () => {
+    return apiRequest("/admin/activate-upcoming", {
       method: "POST",
     });
   },

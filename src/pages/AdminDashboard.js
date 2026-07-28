@@ -422,6 +422,20 @@ function ProductManager({ categories }) {
   };
 
   const [notifyLoading, setNotifyLoading] = useState(null);
+  const [activating, setActivating] = useState(false);
+
+  const handleActivateUpcoming = async () => {
+    setActivating(true);
+    try {
+      const result = await api.activateUpcoming();
+      alert(`Activated ${result.activated} product(s)`);
+      refreshProducts();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActivating(false);
+    }
+  };
 
   const handleNotifyWaitlist = async (productId) => {
     setNotifyLoading(productId);
@@ -597,6 +611,14 @@ function ProductManager({ categories }) {
           disabled={loading}
         >
           Refresh
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={handleActivateUpcoming}
+          disabled={activating}
+        >
+          {activating ? "Activating..." : "Activate Drops"}
         </button>
         <button
           className="btn btn-primary admin-add-product-btn"
@@ -846,6 +868,9 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
   const [images, setImages] = useState(product.images || []);
   const [videos, setVideos] = useState(product.videos || []);
   const [isUpcoming, setIsUpcoming] = useState(product.is_upcoming || false);
+  const [availableAt, setAvailableAt] = useState(
+    product.available_at ? new Date(product.available_at).toISOString().slice(0, 16) : ""
+  );
   const initialCategory = categories.find((c) => c.id === product.category_id);
   const initialCategoryIdRef = useRef(product.category_id || "");
   const [variantRows, setVariantRows] = useState(() =>
@@ -1139,6 +1164,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       size_chart: sizeChart,
       variants,
       is_upcoming: isUpcoming,
+      available_at: availableAt ? new Date(availableAt).toISOString() : null,
     };
 
     try {
@@ -1207,6 +1233,18 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         />
         Coming Soon — hide from shop, show on Coming Soon page
       </label>
+
+      {isUpcoming && (
+        <div className="filter-field">
+          <label>Available on (auto-activate)</label>
+          <input
+            type="datetime-local"
+            value={availableAt}
+            onChange={(e) => setAvailableAt(e.target.value)}
+          />
+          <span className="field-hint">Leave blank to activate manually.</span>
+        </div>
+      )}
 
       <h4>Details *</h4>
       <label>Material *</label>

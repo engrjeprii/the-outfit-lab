@@ -3971,6 +3971,21 @@ body::-webkit-scrollbar,
   opacity: 0.9;
 }
 
+.product-available-at {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
 .coming-soon-page .collection-header {
   flex-direction: column;
   align-items: flex-start;

@@ -210,3 +210,24 @@ export async function maybeCancelStaleOrder(order, env) {
 
   return { ...order, status: "cancelled", cancelled_at: cancelledAt };
 }
+
+/**
+ * Activate upcoming products whose release date has passed and that have stock.
+ * Returns the number of products activated.
+ */
+export async function activateReleasedProducts(env) {
+  const result = await env.DB.prepare(
+    `UPDATE products
+     SET is_upcoming = 0
+     WHERE is_upcoming = 1
+       AND available_at IS NOT NULL
+       AND available_at <= datetime('now')
+       AND EXISTS (
+         SELECT 1 FROM variants
+         WHERE variants.product_id = products.id
+           AND variants.stock_qty > 0
+           AND variants.sold_out = 0
+       )`
+  ).run();
+  return result.meta?.changes || 0;
+}

@@ -23,6 +23,12 @@ function genderLabel(product) {
   return genders.map((g) => g.charAt(0).toUpperCase() + g.slice(1)).join(" / ");
 }
 
+function formatAvailableAt(iso) {
+  if (!iso) return "Available soon";
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 export default function ProductCard({ product }) {
   const { items } = useCart();
   const image = product.images[0];
@@ -53,6 +59,7 @@ export default function ProductCard({ product }) {
           {inCart && <span className="in-cart-dot" title={`${cartQuantity} in cart`} />}
         </div>
         <p className="product-price"><Price price={product.price} retailPrice={product.retail_price} /></p>
+        {isUpcoming && <p className="product-available-at">{formatAvailableAt(product.available_at)}</p>}
       </div>
     </div>
   );

@@ -34,6 +34,7 @@ export async function onRequestPost(context) {
     brand,
     gender = "unisex",
     is_upcoming,
+    available_at,
     images = [],
     videos = [],
     details = {},
@@ -47,6 +48,7 @@ export async function onRequestPost(context) {
 
   const normalizedGender = ["men", "women", "unisex"].includes(gender) ? gender : "unisex";
   const isUpcoming = is_upcoming ? 1 : 0;
+  const availableAt = available_at || null;
   const now = new Date().toISOString();
   const retailPrice = retail_price ? parseInt(retail_price, 10) : 0;
 
@@ -122,7 +124,7 @@ export async function onRequestPost(context) {
   if (existing) {
     productId = existing.id;
     await env.DB.prepare(
-      "UPDATE products SET category_id = ?, brand = ?, gender = ?, name = ?, description = ?, price = ?, retail_price = ?, images = ?, videos = ?, details = ?, size_chart = ?, is_upcoming = ? WHERE id = ?"
+      "UPDATE products SET category_id = ?, brand = ?, gender = ?, name = ?, description = ?, price = ?, retail_price = ?, images = ?, videos = ?, details = ?, size_chart = ?, is_upcoming = ?, available_at = ? WHERE id = ?"
     )
       .bind(
         category_id,
@@ -137,13 +139,14 @@ export async function onRequestPost(context) {
         JSON.stringify(details),
         JSON.stringify(filledSizeChart),
         isUpcoming,
+        availableAt,
         productId
       )
       .run();
   } else {
     productId = generateId();
     await env.DB.prepare(
-      "INSERT INTO products (id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, is_upcoming, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO products (id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, is_upcoming, available_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         productId,
@@ -160,6 +163,7 @@ export async function onRequestPost(context) {
         JSON.stringify(details),
         JSON.stringify(filledSizeChart),
         isUpcoming,
+        availableAt,
         now
       )
       .run();

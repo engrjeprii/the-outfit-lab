@@ -127,7 +127,7 @@ export async function onRequestGet(context) {
 
   // Fetch page of products.
   const selectSql = `
-    SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, is_upcoming, created_at
+    SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, is_upcoming, available_at, created_at
     FROM products
     ${where}
     ORDER BY ${orderBy}

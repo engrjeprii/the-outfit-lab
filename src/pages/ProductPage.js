@@ -300,7 +300,16 @@ export default function ProductPage() {
           {product.is_upcoming ? (
             <div className="product-upcoming-notify">
               <span className="upcoming-badge-large">Coming Soon</span>
-              <p>Be the first to know when this drops.</p>
+              <p>
+                {product.available_at
+                  ? `Available on ${new Date(product.available_at).toLocaleDateString(undefined, {
+                      month: "long",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}`
+                  : "Be the first to know when this drops."}
+              </p>
               <form onSubmit={handleJoinWaitlist}>
                 <label htmlFor="waitlist-email">Email</label>
                 <div className="notify-form-row">
