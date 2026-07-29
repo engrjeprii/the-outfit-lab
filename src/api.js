@@ -573,6 +573,16 @@ const mockApi = {
     return { activated: 0 };
   },
 
+  activateProduct: async (id) => {
+    await delay();
+    const product = products.find((p) => p.id === id);
+    if (product) {
+      product.is_upcoming = false;
+      product.available_at = null;
+    }
+    return { activated: true };
+  },
+
   getOrder: async (id) => {
     await delay();
     const order = orders[id];
@@ -1099,6 +1109,12 @@ const realApi = {
 
   activateUpcoming: async () => {
     return apiRequest("/admin/activate-upcoming", {
+      method: "POST",
+    });
+  },
+
+  activateProduct: async (id) => {
+    return apiRequest(`/admin/products/${encodeURIComponent(id)}`, {
       method: "POST",
     });
   },

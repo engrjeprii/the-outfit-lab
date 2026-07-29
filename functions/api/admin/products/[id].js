@@ -1,5 +1,25 @@
 import { handleOptions, jsonResponse, methodNotAllowedResponse, notFoundResponse, requireAdmin } from "../../../_shared.js";
 
+export async function onRequestPost(context) {
+  const { env, request, params } = context;
+  const authError = requireAdmin(request, env);
+  if (authError) return authError;
+
+  const id = params.id;
+  const product = await env.DB.prepare("SELECT id FROM products WHERE id = ?")
+    .bind(id)
+    .first();
+
+  if (!product) {
+    return notFoundResponse("Product not found");
+  }
+
+  await env.DB.prepare("UPDATE products SET is_upcoming = 0, available_at = NULL WHERE id = ?")
+    .bind(id)
+    .run();
+  return jsonResponse({ activated: true });
+}
+
 export async function onRequestDelete(context) {
   const { env, request, params } = context;
   const authError = requireAdmin(request, env);

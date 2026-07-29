@@ -423,6 +423,7 @@ function ProductManager({ categories }) {
 
   const [notifyLoading, setNotifyLoading] = useState(null);
   const [activating, setActivating] = useState(false);
+  const [activatingProduct, setActivatingProduct] = useState(null);
 
   const handleActivateUpcoming = async () => {
     setActivating(true);
@@ -434,6 +435,19 @@ function ProductManager({ categories }) {
       alert(err.message);
     } finally {
       setActivating(false);
+    }
+  };
+
+  const handleActivateProduct = async (productId, productName) => {
+    if (!window.confirm(`Activate "${productName}"? It will appear in the shop.`)) return;
+    setActivatingProduct(productId);
+    try {
+      await api.activateProduct(productId);
+      refreshProducts();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setActivatingProduct(null);
     }
   };
 
@@ -739,15 +753,26 @@ function ProductManager({ categories }) {
                     </div>
                     <div className="admin-product-actions" onClick={(e) => e.stopPropagation()}>
                       {p.is_upcoming && (
-                        <button
-                          className="icon-btn"
-                          onClick={() => handleNotifyWaitlist(p.id)}
-                          disabled={notifyLoading === p.id}
-                          aria-label="Notify waitlist"
-                          title="Notify waitlist"
-                        >
-                          {notifyLoading === p.id ? "..." : "✉"}
-                        </button>
+                        <>
+                          <button
+                            className="icon-btn"
+                            onClick={() => handleActivateProduct(p.id, p.name)}
+                            disabled={activatingProduct === p.id}
+                            aria-label="Activate product"
+                            title="Activate product"
+                          >
+                            {activatingProduct === p.id ? "..." : "▶"}
+                          </button>
+                          <button
+                            className="icon-btn"
+                            onClick={() => handleNotifyWaitlist(p.id)}
+                            disabled={notifyLoading === p.id}
+                            aria-label="Notify waitlist"
+                            title="Notify waitlist"
+                          >
+                            {notifyLoading === p.id ? "..." : "✉"}
+                          </button>
+                        </>
                       )}
                       <button
                         className="icon-btn"
