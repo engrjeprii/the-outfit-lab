@@ -286,6 +286,8 @@ function generateMockOrders() {
 
 let categories = [
   { id: "cat-shirts", name: "Shirts", slug: "shirts", size_schema: ["alpha"] },
+  { id: "cat-sweatshirts", name: "Sweatshirts", slug: "sweatshirts", size_schema: ["alpha"] },
+  { id: "cat-longsleeves", name: "Long Sleeves", slug: "long-sleeves", size_schema: ["alpha"] },
   { id: "cat-shorts", name: "Shorts", slug: "shorts", size_schema: ["waist", "length"] },
   { id: "cat-pants", name: "Pants", slug: "pants", size_schema: ["waist", "length"] },
   { id: "cat-shoes", name: "Shoes", slug: "shoes", size_schema: ["us", "uk"] },
