@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 function displaySizeLabel(sizeKey) {
   if (!sizeKey) return "";
@@ -23,9 +23,20 @@ export default function FilterPanel({
   sizes = [],
 }) {
   const [touched, setTouched] = useState({});
+  const [searchValue, setSearchValue] = useState(filters.q || "");
+
+  useEffect(() => {
+    setSearchValue(filters.q || "");
+  }, [filters.q]);
 
   const handleChange = (key, value) => {
     onChange({ ...filters, [key]: value, page: 1 });
+  };
+
+  const commitSearch = () => {
+    if (searchValue !== filters.q) {
+      handleChange("q", searchValue);
+    }
   };
 
   const handlePriceChange = (key, value) => {
@@ -58,8 +69,14 @@ export default function FilterPanel({
         <input
           type="text"
           placeholder="Search products..."
-          value={filters.q}
-          onChange={(e) => handleChange("q", e.target.value)}
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onBlur={commitSearch}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              commitSearch();
+            }
+          }}
         />
       </div>
 

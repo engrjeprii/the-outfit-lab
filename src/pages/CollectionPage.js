@@ -163,16 +163,14 @@ export default function CollectionPage() {
 
   const displayTotal = isInCartFilter ? displayProducts.length : result.total;
 
-  const filterPanel = (
-    <FilterPanel
-      categories={categories}
-      brands={brands}
-      sizes={filterSizes}
-      filters={filters}
-      onChange={handleFilterChange}
-      onClear={handleClearFilters}
-    />
-  );
+  const filterPanelProps = {
+    categories,
+    brands,
+    sizes: filterSizes,
+    filters,
+    onChange: handleFilterChange,
+    onClear: handleClearFilters,
+  };
 
   if (loading) return <div className="page-status">Loading...</div>;
   if (error) return <div className="page-status error">{error}</div>;
@@ -204,7 +202,9 @@ export default function CollectionPage() {
       </div>
 
       <div className="collection-layout">
-        <aside className="collection-filters">{filterPanel}</aside>
+        <aside className="collection-filters">
+          <FilterPanel {...filterPanelProps} />
+        </aside>
 
         <div className="collection-results">
           <div className="sort-bar">
@@ -259,7 +259,9 @@ export default function CollectionPage() {
             <CloseIcon />
           </button>
         </div>
-        <div className="mobile-filter-body">{filterPanel}</div>
+        <div className="mobile-filter-body">
+          <FilterPanel {...filterPanelProps} />
+        </div>
         <div className="mobile-filter-footer">
           <button className="btn btn-secondary" onClick={handleClearFilters}>Clear</button>
           <button
