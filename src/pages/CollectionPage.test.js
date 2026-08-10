@@ -60,4 +60,11 @@ describe("CollectionPage search", () => {
       expect(searchInput).toHaveValue("jacket");
     });
   });
+
+  it("displays products on the shop page", async () => {
+    renderPage();
+
+    const productLinks = await screen.findAllByRole("link");
+    expect(productLinks.length).toBeGreaterThan(1);
+  });
 });
