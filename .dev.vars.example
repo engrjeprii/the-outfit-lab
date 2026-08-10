@@ -11,6 +11,6 @@ R2_BUCKET_NAME=the-outfit-lab-images
 D1_DATABASE_ID=replace-with-your-d1-database-id
 
 # Resend (https://resend.com) is used to notify waitlist subscribers.
-# The FROM_EMAIL must be a verified domain or email in your Resend account.
+# The FROM_EMAIL must use a domain verified in your Resend account.
 RESEND_API_KEY=replace-with-your-resend-api-key
-FROM_EMAIL=noreply@the-outfit-lab.pages.dev
+FROM_EMAIL=notify@theoutfitlab.co
