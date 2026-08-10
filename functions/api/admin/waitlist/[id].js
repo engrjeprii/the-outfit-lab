@@ -29,12 +29,21 @@ async function sendEmail({ to, subject, html, env }) {
     }),
   });
 
+  const responseText = await response.text();
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    data = { raw: responseText };
+  }
+
+  console.log(`Resend response for ${to}: status=${response.status}, body=${JSON.stringify(data)}`);
+
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
     throw new Error(data.message || `Email send failed: ${response.status}`);
   }
 
-  return response.json();
+  return data;
 }
 
 export async function onRequestGet(context) {
