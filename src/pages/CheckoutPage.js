@@ -4,7 +4,7 @@ import { api } from "../api";
 import { formatPrice } from "../components/ProductCard";
 import { displaySize } from "../components/SizeColorSelector";
 
-const MESSENGER_URL = process.env.REACT_APP_MESSENGER_URL || "https://m.me/100095771130972";
+const MESSENGER_URL = process.env.REACT_APP_MESSENGER_URL || "https://www.messenger.com/t/114002511786533";
 
 function buildOrderMessage(order) {
   const lines = order.items.map((item) => {
