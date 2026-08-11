@@ -30,7 +30,7 @@ describe("CollectionPage search", () => {
     await userEvent.type(searchInput, "abc");
 
     await waitFor(() => {
-      expect(searchInput).toHaveValue("abc");
+      expect(searchInput).toHaveValue("ABC");
     });
   });
 
@@ -44,7 +44,7 @@ describe("CollectionPage search", () => {
     await userEvent.tab();
 
     await waitFor(() => {
-      expect(searchInput).toHaveValue("hoodie");
+      expect(searchInput).toHaveValue("HOODIE");
     });
   });
 
@@ -57,7 +57,7 @@ describe("CollectionPage search", () => {
     await userEvent.type(searchInput, "jacket{Enter}");
 
     await waitFor(() => {
-      expect(searchInput).toHaveValue("jacket");
+      expect(searchInput).toHaveValue("JACKET");
     });
   });
 

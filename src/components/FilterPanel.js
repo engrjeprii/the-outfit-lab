@@ -70,13 +70,14 @@ export default function FilterPanel({
           type="text"
           placeholder="Search products..."
           value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
+          onChange={(e) => setSearchValue(e.target.value.toUpperCase())}
           onBlur={commitSearch}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               commitSearch();
             }
           }}
+          style={{ textTransform: "uppercase" }}
         />
       </div>
 
