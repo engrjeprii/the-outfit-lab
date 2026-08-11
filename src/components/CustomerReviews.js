@@ -194,7 +194,7 @@ export default function CustomerReviews() {
     }
   };
 
-  const displayAverage = summary.average ? summary.average.toFixed(1) : "4.9";
+  const displayAverage = summary.average ? summary.average.toFixed(1) : null;
   const displayCount = summary.count || 0;
 
   return (
@@ -206,31 +206,37 @@ export default function CustomerReviews() {
       <div className="customer-reviews-inner">
         <div className="customer-reviews-header fade-up">
           <span className="reviews-eyebrow">
-            <StarRating rating={5} /> Trusted by Fashion Lovers
+            <StarRating rating={5} /> Customer Reviews
           </span>
-          <h2 id="reviews-heading">Loved by Thousands of Customers</h2>
-          <p>Quality, comfort, and timeless style—see why shoppers keep coming back.</p>
+          <h2 id="reviews-heading">
+            {displayCount > 0 ? "Loved by Our Customers" : "Share Your Experience"}
+          </h2>
+          <p>
+            {displayCount > 0
+              ? "See what shoppers are saying about The Outfit Lab."
+              : "Be the first to leave a review and help others shop with confidence."}
+          </p>
         </div>
 
-        <div className="reviews-stats fade-up">
-          <div className="review-stat-card">
-            <span className="review-stat-icon">⭐</span>
-            <span className="review-stat-value">{displayAverage}/5</span>
-            <span className="review-stat-label">Average Rating</span>
+        {displayCount > 0 && (
+          <div className="reviews-stats fade-up">
+            <div className="review-stat-card">
+              <span className="review-stat-icon">⭐</span>
+              <span className="review-stat-value">{displayAverage}/5</span>
+              <span className="review-stat-label">Average Rating</span>
+            </div>
+            <div className="review-stat-card">
+              <span className="review-stat-icon">👕</span>
+              <span className="review-stat-value">{displayCount.toLocaleString()}</span>
+              <span className="review-stat-label">Reviews</span>
+            </div>
+            <div className="review-stat-card">
+              <span className="review-stat-icon">🚚</span>
+              <span className="review-stat-value">Fast</span>
+              <span className="review-stat-label">Nationwide Shipping</span>
+            </div>
           </div>
-          <div className="review-stat-card">
-            <span className="review-stat-icon">👕</span>
-            <span className="review-stat-value">
-              {displayCount > 0 ? `${displayCount.toLocaleString()}+` : "10,000+"}
-            </span>
-            <span className="review-stat-label">Happy Customers</span>
-          </div>
-          <div className="review-stat-card">
-            <span className="review-stat-icon">🚚</span>
-            <span className="review-stat-value">Fast</span>
-            <span className="review-stat-label">Nationwide Shipping</span>
-          </div>
-        </div>
+        )}
 
         {loading ? (
           <p className="reviews-loading">Loading reviews...</p>
