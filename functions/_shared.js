@@ -143,6 +143,45 @@ export function mergeDuplicateVariants(variants) {
   }
   return Array.from(map.values());
 }
+export async function sendEmail({ to, subject, html, env }) {
+  const apiKey = env.RESEND_API_KEY;
+  const from = env.FROM_EMAIL;
+
+  if (!apiKey || !from) {
+    throw new Error("Email service is not configured");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to,
+      subject,
+      html,
+    }),
+  });
+
+  const responseText = await response.text();
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    data = { raw: responseText };
+  }
+
+  console.log(`Resend response for ${to}: status=${response.status}, body=${JSON.stringify(data)}`);
+
+  if (!response.ok) {
+    throw new Error(data.message || `Email send failed: ${response.status}`);
+  }
+
+  return data;
+}
+
 export function verifyAdminToken(request, env) {
   const auth = request.headers.get("Authorization") || "";
   const token = auth.replace(/^Bearer\s+/i, "");

@@ -5,46 +5,10 @@ import {
   methodNotAllowedResponse,
   notFoundResponse,
   requireAdmin,
+  sendEmail,
 } from "../../../_shared.js";
 
-async function sendEmail({ to, subject, html, env }) {
-  const apiKey = env.RESEND_API_KEY;
-  const from = env.FROM_EMAIL;
-
-  if (!apiKey || !from) {
-    throw new Error("Email service is not configured");
-  }
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from,
-      to,
-      subject,
-      html,
-    }),
-  });
-
-  const responseText = await response.text();
-  let data;
-  try {
-    data = JSON.parse(responseText);
-  } catch {
-    data = { raw: responseText };
-  }
-
-  console.log(`Resend response for ${to}: status=${response.status}, body=${JSON.stringify(data)}`);
-
-  if (!response.ok) {
-    throw new Error(data.message || `Email send failed: ${response.status}`);
-  }
-
-  return data;
-}
+const STORE_URL = "https://theoutfitlab.co";
 
 export async function onRequestGet(context) {
   const { env, request, params } = context;
@@ -109,7 +73,7 @@ export async function onRequestPost(context) {
   const html = `
     <p>Hi there,</p>
     <p>Great news — <strong>${product.name}</strong> is now available at The Outfit Lab.</p>
-    <p><a href="https://the-outfit-lab.pages.dev/products/${product.id}">Shop it now</a></p>
+    <p><a href="${STORE_URL}/products/${product.id}">Shop it now</a></p>
     <p>Thanks,<br/>The Outfit Lab Team</p>
   `;
 

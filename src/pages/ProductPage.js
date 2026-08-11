@@ -198,6 +198,8 @@ export default function ProductPage() {
       const result = await api.joinWaitlist(product.id, waitlistEmail);
       if (result.alreadyJoined) {
         setWaitlistMessage("You're already on the list. We'll email you when it's available.");
+      } else if (result.emailSent) {
+        setWaitlistMessage("You're on the list. Check your inbox for a confirmation email.");
       } else {
         setWaitlistMessage("You're on the list. We'll email you when it drops.");
       }

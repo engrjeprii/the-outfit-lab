@@ -3,6 +3,7 @@ import {
   handleOptions,
   jsonResponse,
   methodNotAllowedResponse,
+  sendEmail,
 } from "../_shared.js";
 
 function generateId() {
@@ -12,6 +13,8 @@ function generateId() {
 function isValidEmail(email) {
   return typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+const STORE_URL = "https://theoutfitlab.co";
 
 export async function onRequestPost(context) {
   const { env, request } = context;
@@ -34,7 +37,7 @@ export async function onRequestPost(context) {
   }
 
   const product = await env.DB.prepare(
-    "SELECT id FROM products WHERE id = ? AND deleted_at IS NULL AND is_upcoming = 1"
+    "SELECT id, name FROM products WHERE id = ? AND deleted_at IS NULL AND is_upcoming = 1"
   )
     .bind(product_id)
     .first();
@@ -63,7 +66,28 @@ export async function onRequestPost(context) {
     .bind(id, product_id, normalizedEmail, now)
     .run();
 
-  return jsonResponse({ id, alreadyJoined: false }, 201);
+  let emailSent = false;
+  let emailError = null;
+  try {
+    await sendEmail({
+      to: normalizedEmail,
+      subject: `You're on the waitlist for ${product.name}`,
+      html: `
+        <p>Hi there,</p>
+        <p>Thanks for your interest in <strong>${product.name}</strong>.</p>
+        <p>You're on the waitlist and we'll email you as soon as it's available at The Outfit Lab.</p>
+        <p><a href="${STORE_URL}/products/${product.id}">View the product</a></p>
+        <p>Thanks,<br/>The Outfit Lab Team</p>
+      `,
+      env,
+    });
+    emailSent = true;
+  } catch (err) {
+    emailError = err.message;
+    console.error(`Waitlist confirmation email failed for ${normalizedEmail}:`, err.message);
+  }
+
+  return jsonResponse({ id, alreadyJoined: false, emailSent, emailError }, 201);
 }
 
 export async function onRequestOptions() {

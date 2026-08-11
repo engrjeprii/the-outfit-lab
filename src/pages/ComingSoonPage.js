@@ -15,6 +15,8 @@ function NotifyForm({ productId, onJoined }) {
       const result = await api.joinWaitlist(productId, email);
       if (result.alreadyJoined) {
         setMessage("You're already on the list. We'll email you when it's available.");
+      } else if (result.emailSent) {
+        setMessage("You're on the list. Check your inbox for a confirmation email.");
       } else {
         setMessage("You're on the list. We'll email you when it drops.");
       }

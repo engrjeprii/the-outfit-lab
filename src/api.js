@@ -552,6 +552,7 @@ const mockApi = {
       product_id: productId,
       email: email.trim().toLowerCase(),
       alreadyJoined: false,
+      emailSent: true,
     };
   },
 
