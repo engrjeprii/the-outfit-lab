@@ -866,6 +866,39 @@ const mockApi = {
     return { id, shipping_status, tracking_number: order.tracking_number };
   },
 
+  cancelOrder: async (id) => {
+    await delay();
+    if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
+      throw new Error("Unauthorized");
+    }
+    const order = orders[id];
+    if (!order) throw new Error("Order not found");
+    if (order.status === "cancelled") throw new Error("Order is already cancelled");
+
+    if (order.status === "confirmed") {
+      for (const item of order.items) {
+        const product = products.find((p) => p.id === item.product_id);
+        if (!product) continue;
+        let variant = product.variants.find((v) => v.id === item.variant_id);
+        if (!variant && item.size_key && item.colorway) {
+          const gender = item.gender || "unisex";
+          variant = product.variants.find(
+            (v) =>
+              v.gender === gender && v.size_key === item.size_key && v.colorway === item.colorway
+          );
+        }
+        if (variant) {
+          variant.stock_qty += item.quantity || 1;
+          if (variant.stock_qty > 0) variant.sold_out = 0;
+        }
+      }
+    }
+
+    order.status = "cancelled";
+    order.cancelled_at = new Date().toISOString();
+    return { id, status: "cancelled", cancelled_at: order.cancelled_at };
+  },
+
   listReviews: async (status = "pending") => {
     await delay();
     if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
@@ -1061,6 +1094,12 @@ const realApi = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ shipping_status, tracking_number }),
+    });
+  },
+
+  cancelOrder: async (id) => {
+    return apiRequest(`/admin/orders/${encodeURIComponent(id)}/cancel`, {
+      method: "POST",
     });
   },
 

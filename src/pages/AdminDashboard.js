@@ -1484,6 +1484,7 @@ function OrderManager() {
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [sort, setSort] = useState({ column: "created_at", direction: "desc" });
@@ -1543,6 +1544,21 @@ function OrderManager() {
 
   const handleCloseOrder = () => {
     setOrder(null);
+  };
+
+  const handleCancel = async () => {
+    if (!window.confirm(`Cancel order ${order.id}? This will restore stock if the order was confirmed.`)) return;
+    setCancelling(true);
+    setError("");
+    try {
+      await api.cancelOrder(order.id);
+      await loadOrders();
+      setOrder(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleUpdateStatus = async () => {
@@ -1728,11 +1744,18 @@ function OrderManager() {
                   Close
                 </button>
                 <button
+                  className="btn btn-danger"
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                >
+                  {cancelling ? "..." : "Cancel Order"}
+                </button>
+                <button
                   className="btn btn-primary"
                   onClick={handleConfirm}
                   disabled={confirming}
                 >
-                  Confirm Sale
+                  {confirming ? "..." : "Confirm Sale"}
                 </button>
               </div>
             )}
@@ -1765,11 +1788,18 @@ function OrderManager() {
                     Close
                   </button>
                   <button
+                    className="btn btn-danger"
+                    onClick={handleCancel}
+                    disabled={cancelling}
+                  >
+                    {cancelling ? "..." : "Cancel Order"}
+                  </button>
+                  <button
                     className="btn btn-primary"
                     onClick={handleUpdateStatus}
                     disabled={updatingStatus}
                   >
-                    Update Status
+                    {updatingStatus ? "..." : "Update Status"}
                   </button>
                 </div>
               </>
