@@ -307,8 +307,7 @@ export default function ProductPage() {
                   ? `Available on ${new Date(product.available_at).toLocaleDateString(undefined, {
                       month: "long",
                       day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
+                      year: "numeric",
                     })}`
                   : "Be the first to know when this drops."}
               </p>
