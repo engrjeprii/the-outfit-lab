@@ -11,7 +11,7 @@ function buildOrderMessage(order) {
     const size = displaySize(item.size_key, item.gender);
     const color = item.colorway && item.colorway !== "Default" ? ` / ${item.colorway}` : "";
     const gender = item.gender ? ` / ${item.gender}` : "";
-    return `- ${item.name} (${size}${color}${gender}) x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
+    return `- ${item.name}${item.is_preorder ? " [Pre-order]" : ""} (${size}${color}${gender}) x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
   });
 
   return [
@@ -120,7 +120,7 @@ export default function CheckoutPage() {
         {order.items.map((item, idx) => (
           <div key={idx} className="order-summary-item">
             <span>
-              {item.name} ({displaySize(item.size_key, item.gender)}
+              {item.name}{item.is_preorder ? " [Pre-order]" : ""} ({displaySize(item.size_key, item.gender)}
               {item.colorway && item.colorway !== "Default" && ` / ${item.colorway}`}
               {item.gender && ` / ${item.gender}`}) x
               {item.quantity}

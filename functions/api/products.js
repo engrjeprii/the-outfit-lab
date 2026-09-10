@@ -40,6 +40,7 @@ export async function onRequestGet(context) {
   const colorway = url.searchParams.get("colorway");
   const sort = url.searchParams.get("sort") || "newest";
   const upcoming = url.searchParams.get("upcoming");
+  const preorder = url.searchParams.get("preorder");
 
   const isAdmin = verifyAdminToken(request, env);
 
@@ -48,8 +49,15 @@ export async function onRequestGet(context) {
 
   if (upcoming === "true") {
     whereClauses.push("is_upcoming = 1");
-  } else if (!isAdmin) {
+  } else if (upcoming === "false" || !isAdmin || preorder === "true") {
     whereClauses.push("is_upcoming = 0");
+  }
+
+  if (preorder === "true" || preorder === "false") {
+    whereClauses.push("is_preorder = ?");
+    bindings.push(preorder === "true" ? 1 : 0);
+  } else if (!isAdmin && upcoming !== "true") {
+    whereClauses.push("is_preorder = 0");
   }
 
   if (category) {
@@ -127,7 +135,7 @@ export async function onRequestGet(context) {
 
   // Fetch page of products.
   const selectSql = `
-    SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, is_upcoming, available_at, created_at
+    SELECT id, category_id, brand, gender, sku, name, description, price, retail_price, images, videos, details, size_chart, is_upcoming, is_preorder, available_at, created_at
     FROM products
     ${where}
     ORDER BY ${orderBy}

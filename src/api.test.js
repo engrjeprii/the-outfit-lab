@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { preparePreorders } from "./testHelpers/preorders";
 
 describe("mock API getProducts", () => {
   it("returns a paginated envelope with default values", async () => {
@@ -35,4 +36,31 @@ describe("mock API getProducts", () => {
     expect(page1.products.length).toBeLessThanOrEqual(2);
     expect(page1.page).toBe(1);
   });
+});
+
+
+test("pre-order filtering excludes regular and upcoming products before pagination", async () => {
+  const restore = await preparePreorders();
+  try {
+  const result = await api.getProducts({ preorder: true, limit: 1 });
+  expect(result.total).toBeGreaterThan(1);
+  expect(result.products).toHaveLength(1);
+  expect(result.products[0].is_preorder).toBe(true);
+  expect(result.products[0].is_upcoming).toBe(false);
+  const regular = await api.getProducts({ preorder: false });
+  expect(regular.products.every((product) => !product.is_preorder)).toBe(true);
+  } finally {
+    await restore();
+  }
+});
+
+
+test("regular shop excludes preorder-only items", async () => {
+  const result = await api.getProducts();
+  expect(result.products.length).toBeGreaterThan(0);
+  expect(result.products.every((product) => !product.is_preorder && !product.is_upcoming)).toBe(true);
+});
+
+test("sample catalog contains no pre-orders", async () => {
+  expect((await api.getProducts({ preorder: true })).total).toBe(0);
 });

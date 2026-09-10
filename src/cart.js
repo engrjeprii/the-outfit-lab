@@ -35,6 +35,7 @@ export function CartProvider({ children }) {
           product_id: product.id,
           variant_id: variant.id,
           name: product.name,
+          is_preorder: Boolean(product.is_preorder),
           image: product.images[0] || "",
           size_key: variant.size_key,
           colorway: variant.colorway,

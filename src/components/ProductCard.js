@@ -52,6 +52,7 @@ export default function ProductCard({ product }) {
           <h3 className="product-name">{product.name}</h3>
           {inCart && <span className="in-cart-dot" title={`${cartQuantity} in cart`} />}
         </div>
+        {Boolean(product.is_preorder) && <p className="preorder-label">Pre-order</p>}
         <p className="product-price"><Price price={product.price} retailPrice={product.retail_price} /></p>
       </div>
     </div>

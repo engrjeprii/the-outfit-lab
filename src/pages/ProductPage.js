@@ -297,6 +297,12 @@ export default function ProductPage() {
           <p className="product-price-large">
             <Price price={product.price} retailPrice={product.retail_price} />
           </p>
+          {Boolean(product.is_preorder) && (
+            <div className="preorder-notice">
+              <strong>Pre-order</strong>
+              <p>This item ships after arrival. Confirm availability and delivery timing with us on Messenger.</p>
+            </div>
+          )}
           <p className="product-description">{product.description}</p>
 
           {product.is_upcoming ? (
@@ -446,7 +452,7 @@ export default function ProductPage() {
             onClick={handleAddToCart}
             disabled={!selectedVariant}
           >
-            {selectedVariant ? "Add to Cart" : isShoes ? "Select gender, color, and size" : "Select size and color"}
+            {selectedVariant ? (product.is_preorder ? "Pre-order — Add to Cart" : "Add to Cart") : isShoes ? "Select gender, color, and size" : "Select size and color"}
           </button>
 
           {added && (

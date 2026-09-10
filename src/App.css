@@ -4112,3 +4112,43 @@ body::-webkit-scrollbar,
   border-radius: var(--radius);
   vertical-align: middle;
 }
+
+/* Pre-order catalog and purchase notices */
+.preorder-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0.25rem 0;
+}
+
+.preorder-notice {
+  border-left: 3px solid var(--text);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-lg);
+  background: var(--bg);
+}
+
+.preorder-notice p {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  margin: 0.25rem 0 0;
+}
+
+.product-availability-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-xl);
+  margin: var(--space-sm) 0;
+}
+
+.product-availability-options .checkbox-label {
+  margin: 0;
+}
+
+.product-availability-options input[type="checkbox"] {
+  min-height: 0;
+  flex-shrink: 0;
+}

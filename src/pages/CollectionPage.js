@@ -63,7 +63,9 @@ function CloseIcon() {
   );
 }
 
-export default function CollectionPage() {
+export default function CollectionPage({ preOrderOnly = false }) {
+  const catalogPath = preOrderOnly ? "/pre-order" : "/shop";
+  const catalogLabel = preOrderOnly ? "Pre-order" : "Shop";
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState(() => parseFilters(searchParams));
   const [result, setResult] = useState({ products: [], total: 0, page: 1, limit: 24 });
@@ -88,7 +90,7 @@ export default function CollectionPage() {
           api.getCategories(),
           api.getBrands(),
           api.getFilters({ category: filters.category }),
-          api.getProducts(filters),
+          api.getProducts(preOrderOnly ? { ...filters, preorder: true, upcoming: false } : { ...filters, preorder: false, upcoming: false }),
         ]);
         setCategories(cats || []);
         setBrands(brandList || []);
@@ -102,7 +104,7 @@ export default function CollectionPage() {
       }
     }
     load();
-  }, [filters]);
+  }, [filters, preOrderOnly]);
 
   useEffect(() => {
     try {
@@ -182,17 +184,22 @@ export default function CollectionPage() {
         {selectedCategory ? (
           <>
             {" / "}
-            <Link to="/shop">Shop</Link>
+            <Link to={catalogPath}>{catalogLabel}</Link>
             {" / "}
             {selectedCategory.name}
           </>
         ) : (
-          <>{" / "}Shop</>
+          <>{" / "}{catalogLabel}</>
         )}
       </nav>
 
       <div className="collection-header">
-        <h1>{selectedCategory ? selectedCategory.name : "Shop All"}</h1>
+        <div>
+          <h1>{preOrderOnly ? "Pre-order" : selectedCategory ? selectedCategory.name : "Shop All"}</h1>
+          {preOrderOnly && (
+            <p className="collection-subtitle">Order ahead. Confirm availability and delivery timing with us on Messenger.</p>
+          )}
+        </div>
         <button
           className="btn btn-secondary mobile-filter-toggle"
           onClick={() => setShowFilters((s) => !s)}
@@ -238,7 +245,10 @@ export default function CollectionPage() {
               )}
             </>
           ) : (
-            <p className="empty">No products match your filters.</p>
+            <div className="empty">
+              <p>{preOrderOnly ? "No pre-order items match your filters right now." : "No products match your filters."}</p>
+              {preOrderOnly && <Link className="btn btn-secondary" to="/shop">Browse the shop</Link>}
+            </div>
           )}
         </div>
       </div>

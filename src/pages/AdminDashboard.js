@@ -385,8 +385,12 @@ function ProductManager({ categories }) {
         const next = { ...filters, ...overrides };
         if (next.status === "upcoming") {
           next.upcoming = true;
+        } else if (next.status === "preorder") {
+          next.preorder = true;
+          next.upcoming = false;
         } else if (next.status === "available") {
           next.upcoming = false;
+          next.preorder = false;
         }
         delete next.status;
         const data = await api.getProducts(next);
@@ -580,6 +584,7 @@ function ProductManager({ categories }) {
           options={[
             { value: "available", label: "Available" },
             { value: "upcoming", label: "Coming Soon" },
+            { value: "preorder", label: "Pre-order" },
           ]}
           onChange={(value) => handleFilterChange("status", value)}
         />
@@ -748,6 +753,7 @@ function ProductManager({ categories }) {
                           {p.sku} · {category?.name || p.category_id} · {formatPrice(p.price)} ·{" "}
                           {p.total_stock || 0} in stock
                           {p.is_upcoming && <span className="admin-upcoming-badge">Coming Soon</span>}
+                          {Boolean(p.is_preorder) && <span className="admin-upcoming-badge">Pre-order</span>}
                         </span>
                       </div>
                     </div>
@@ -893,6 +899,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
   const [images, setImages] = useState(product.images || []);
   const [videos, setVideos] = useState(product.videos || []);
   const [isUpcoming, setIsUpcoming] = useState(product.is_upcoming || false);
+  const [isPreorder, setIsPreorder] = useState(Boolean(product.is_preorder));
   const [availableAt, setAvailableAt] = useState(
     product.available_at ? new Date(product.available_at).toISOString().slice(0, 16) : ""
   );
@@ -1189,6 +1196,7 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
       size_chart: sizeChart,
       variants,
       is_upcoming: isUpcoming,
+      is_preorder: isPreorder,
       available_at: availableAt ? new Date(availableAt).toISOString() : null,
     };
 
@@ -1250,14 +1258,33 @@ function ProductForm({ product, categories, products, onSaved, onCancel }) {
         placeholder="Optional original/MSRP price"
       />
 
-      <label className="checkbox-label">
-        <input
-          type="checkbox"
-          checked={isUpcoming}
-          onChange={(e) => setIsUpcoming(e.target.checked)}
-        />
-        Coming Soon — hide from shop, show on Coming Soon page
-      </label>
+      <div className="product-availability-options">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={isUpcoming}
+            onChange={(e) => {
+              setIsUpcoming(e.target.checked);
+              if (e.target.checked) setIsPreorder(false);
+            }}
+          />
+          Coming Soon
+        </label>
+
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={isPreorder}
+            onChange={(e) => {
+              setIsPreorder(e.target.checked);
+              if (e.target.checked) setIsUpcoming(false);
+            }}
+          />
+          Preorder only
+        </label>
+      </div>
+      {isUpcoming && <p className="field-hint">Hidden from the shop and shown on the Coming Soon page.</p>}
+      {isPreorder && <p className="field-hint">Set variant quantities to the number available for pre-order. Include expected delivery timing in the description.</p>}
 
       {isUpcoming && (
         <div className="filter-field">

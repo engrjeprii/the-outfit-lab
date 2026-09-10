@@ -68,3 +68,16 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+### Pre-order catalog
+
+`/pre-order` lists only products marked **Preorder only**, with the shop's search,
+filters, sorting, and pagination. Mark products in the admin product editor;
+Coming Soon and Pre-order are mutually exclusive. Set each variant's quantity
+to the number available for pre-order and include delivery expectations in the
+description. Pre-orders use the existing cart and Messenger checkout, with their
+status included in the order message. They are excluded from the regular shop.
+
+Apply `migrations/0018_add_is_preorder.sql` to D1 before deploying this version.
+Existing products default to regular items. No sample pre-orders are included.

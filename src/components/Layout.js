@@ -59,6 +59,7 @@ function CartIcon({ count }) {
 const NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/shop", label: "Shop" },
+  { to: "/pre-order", label: "Pre-order" },
   { to: "/collections", label: "Collections" },
   { to: "/coming-soon", label: "Coming Soon" },
   // { to: "/", label: "Sale" },

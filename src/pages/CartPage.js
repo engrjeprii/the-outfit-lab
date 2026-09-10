@@ -57,6 +57,7 @@ export default function CartPage() {
               <img src={item.image} alt={item.name} className="cart-item-image" />
               <div className="cart-item-meta">
                 <h3>{item.name}</h3>
+                {item.is_preorder && <p className="preorder-label">Pre-order</p>}
                 <p>
                   {displaySize(item.size_key, item.gender)}
                   {item.colorway && item.colorway !== "Default" && ` · ${item.colorway}`}

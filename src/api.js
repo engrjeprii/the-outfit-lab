@@ -34,7 +34,7 @@ function delay(ms = 0) {
 function buildOrderMessage(order) {
   const lines = order.items.map((item) => {
     const size = displaySize(item.size_key, item.gender);
-    return `- ${item.name} (${size} / ${item.colorway}) x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
+    return `- ${item.name}${item.is_preorder ? " [Pre-order]" : ""} (${size} / ${item.colorway}) x${item.quantity} — ${formatPrice(item.price * item.quantity)}`;
   });
 
   return [
@@ -224,6 +224,7 @@ function generateMockProducts() {
       size_chart: sizeChart,
       created_at: new Date(Date.now() - idx * 86400000).toISOString(),
       is_upcoming: false,
+      is_preorder: false,
       available_at: null,
       variants,
     });
@@ -356,6 +357,7 @@ const mockApi = {
       size,
       colorway,
       upcoming,
+      preorder,
       sort = "newest",
       page = 1,
       limit = 24,
@@ -390,10 +392,17 @@ const mockApi = {
       list = list.filter((p) => p.category_id === category);
     }
 
-    if (upcoming) {
+    if (upcoming === true || upcoming === "true") {
       list = list.filter((p) => p.is_upcoming);
-    } else if (!isAdmin) {
+    } else if (upcoming === false || upcoming === "false" || !isAdmin || preorder === true || preorder === "true") {
       list = list.filter((p) => !p.is_upcoming);
+    }
+
+    if (preorder !== undefined && preorder !== null && preorder !== "") {
+      const preOrderOnly = preorder === true || preorder === "true";
+      list = list.filter((p) => Boolean(p.is_preorder) === preOrderOnly);
+    } else if (!isAdmin && upcoming !== true && upcoming !== "true") {
+      list = list.filter((p) => !p.is_preorder);
     }
 
     if (brand) {
@@ -710,6 +719,9 @@ const mockApi = {
 
   saveProduct: async (product) => {
     await delay();
+    if (product.is_upcoming && product.is_preorder) {
+      throw new Error("A product cannot be both Coming Soon and Pre-order");
+    }
     if (!mockApi.isAdminToken(localStorage.getItem("admin-token") || "")) {
       throw new Error("Unauthorized");
     }
@@ -752,6 +764,7 @@ const mockApi = {
       existing.details = { ...product.details };
       existing.size_chart = product.size_chart.map((row) => ({ ...row }));
       existing.is_upcoming = product.is_upcoming ? true : false;
+      existing.is_preorder = Boolean(product.is_preorder) && !existing.is_upcoming;
       existing.available_at = product.available_at || null;
 
       // Preserve existing variant IDs for matching gender + size_key + colorway.
@@ -802,6 +815,7 @@ const mockApi = {
       size_chart: product.size_chart.map((row) => ({ ...row })),
       created_at: now,
       is_upcoming: product.is_upcoming ? true : false,
+      is_preorder: Boolean(product.is_preorder) && !product.is_upcoming,
       available_at: product.available_at || null,
       variants,
     };

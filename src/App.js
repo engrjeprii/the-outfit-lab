@@ -20,7 +20,8 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/shop" element={<CollectionPage />} />
+            <Route path="/shop" element={<CollectionPage key="shop" />} />
+            <Route path="/pre-order" element={<CollectionPage key="pre-order" preOrderOnly />} />
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/coming-soon" element={<ComingSoonPage />} />
             <Route path="/products/:id" element={<ProductPage />} />
